@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>DY Concrete Pump Controller</title>
     <style>
-        /* 1. 전체화면 기본 리셋 & 스크롤 방지 */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -13,19 +12,22 @@
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
+            touch-action: none; /* 전체화면 고정 및 스크롤 완전 방지 */
         }
 
         html, body {
             width: 100vw;
             height: 100vh;
-            height: 100dvh; /* iOS 모바일 가상 키보드/주소창 바 대응 */
+            height: 100dvh;
+            position: fixed;
+            top: 0;
+            left: 0;
             overflow: hidden;
             background-color: #121214;
             color: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
-        /* 2. 메인 컨테이너 (화면 전체 100% 채움) */
         .app-container {
             display: flex;
             flex-direction: column;
@@ -36,42 +38,37 @@
             justify-content: space-between;
         }
 
-        /* 3. 상단 헤더 바 */
+        /* 상단 헤더 */
         .header-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 40px;
+            height: 36px;
             background: #1e1e22;
             border-radius: 8px;
             padding: 0 16px;
-            margin-bottom: 8px;
         }
 
-        .status-text {
-            font-weight: bold;
-            font-size: 14px;
-            color: #ff453a;
-        }
+        .status-text { font-weight: bold; font-size: 13px; color: #ff453a; }
         .status-text.connected { color: #30d158; }
 
         .btn-connect {
             background-color: #0a84ff;
             color: white;
             border: none;
-            padding: 6px 14px;
+            padding: 5px 12px;
             border-radius: 6px;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 12px;
             cursor: pointer;
         }
 
-        /* 4. 중단 조이스틱 영역 (화면 절반 높이 차지) */
+        /* 메인 조이스틱 섹션 */
         .joystick-section {
             display: flex;
             gap: 12px;
             flex: 1.2;
-            margin-bottom: 8px;
+            margin: 6px 0;
         }
 
         .joystick-card {
@@ -83,14 +80,10 @@
             flex-direction: column;
             align-items: center;
             justify-content: space-around;
-            padding: 8px;
+            padding: 6px;
         }
 
-        .card-title {
-            font-size: 13px;
-            color: #0a84ff;
-            font-weight: bold;
-        }
+        .card-title { font-size: 12px; color: #0a84ff; font-weight: bold; }
 
         .stick-area {
             width: 110px;
@@ -105,12 +98,15 @@
         }
 
         .stick-handle {
-            width: 44px;
-            height: 44px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
             background: radial-gradient(circle, #e5e5ea 0%, #8e8e93 100%);
             border: 2px solid #ffffff;
+            position: absolute;
             box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            left: 34px;
+            top: 34px;
         }
 
         .slider-box {
@@ -120,18 +116,10 @@
             align-items: center;
         }
 
-        .slider-label {
-            font-size: 11px;
-            color: #ffd60a;
-            margin-bottom: 4px;
-        }
+        .slider-label { font-size: 11px; color: #ffd60a; margin-bottom: 2px; }
+        .custom-slider { width: 100%; accent-color: #ffd60a; }
 
-        .custom-slider {
-            width: 100%;
-            accent-color: #ffd60a;
-        }
-
-        /* 5. 하단 버튼 및 가변 노브 제어판 */
+        /* 하단 제어 패널 */
         .control-panel {
             flex: 1;
             background: #1c1c20;
@@ -140,7 +128,7 @@
             display: flex;
             align-items: center;
             justify-content: space-around;
-            padding: 6px;
+            padding: 4px;
         }
 
         .group-box {
@@ -150,41 +138,36 @@
             gap: 4px;
         }
 
-        .group-title {
-            font-size: 10px;
-            color: #8e8e93;
-            letter-spacing: 0.5px;
-        }
+        .group-title { font-size: 10px; color: #8e8e93; }
 
         .btn-ctrl {
-            width: 50px;
-            height: 32px;
+            width: 48px;
+            height: 30px;
             background: #2c2c32;
             color: #fff;
             border: 1px solid #44444e;
             border-radius: 6px;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: bold;
         }
-        .btn-ctrl:active { background: #0a84ff; }
+        .btn-ctrl:active, .btn-ctrl.active { background: #0a84ff; border-color: #0a84ff; }
 
-        /* GSS 비상 정지 버튼 레드 하이라이트 */
         .btn-gss {
-            width: 64px;
-            height: 64px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
             background: radial-gradient(circle, #ff453a 0%, #ff3b30 100%);
             color: white;
             font-weight: bold;
-            font-size: 15px;
+            font-size: 14px;
             border: 3px solid #ffffff;
-            box-shadow: 0 0 15px rgba(255, 69, 58, 0.6);
+            box-shadow: 0 0 12px rgba(255, 69, 58, 0.6);
         }
+        .btn-gss:active { transform: scale(0.95); }
 
-        /* 다이얼 노브 스타일 */
         .knob-container {
-            width: 44px;
-            height: 44px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             border: 3px solid #ffd60a;
             display: flex;
@@ -194,52 +177,46 @@
         }
         .knob-pointer {
             width: 3px;
-            height: 18px;
+            height: 16px;
             background: #ffd60a;
             position: absolute;
-            top: 4px;
+            top: 2px;
             border-radius: 2px;
+            transform-origin: bottom center;
         }
-        .knob-val {
-            font-size: 11px;
-            color: #ffd60a;
-            font-weight: bold;
-            margin-top: 2px;
-        }
+        .knob-val { font-size: 10px; color: #ffd60a; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
-    <!-- 상단 바 -->
     <div class="header-bar">
         <div id="status" class="status-text">BLE 미연결</div>
         <button class="btn-connect" onclick="connectBLE()">ESP32 연결하기</button>
     </div>
 
-    <!-- 중단 조이스틱 영역 -->
     <div class="joystick-section">
         <!-- 좌측 조이스틱 -->
         <div class="joystick-card">
             <div class="card-title">좌측 조이스틱 (4붐/5붐)</div>
-            <div class="stick-area">
-                <div class="stick-handle"></div>
+            <div class="stick-area" id="areaLeft">
+                <div class="stick-handle" id="stickLeft"></div>
             </div>
             <div class="slider-box">
-                <div class="slider-label">3붐 회전 (A5): 128</div>
-                <input type="range" class="custom-slider" min="0" max="255" value="128">
+                <div class="slider-label" id="lblA5">3붐 회전 (A5): 128</div>
+                <input type="range" id="sliderA5" class="custom-slider" min="0" max="255" value="128">
             </div>
         </div>
 
         <!-- 우측 조이스틱 -->
         <div class="joystick-card">
             <div class="card-title">우측 조이스틱 (스윙/1붐)</div>
-            <div class="stick-area">
-                <div class="stick-handle"></div>
+            <div class="stick-area" id="areaRight">
+                <div class="stick-handle" id="stickRight"></div>
             </div>
             <div class="slider-box">
-                <div class="slider-label">2붐 회전 (A6): 128</div>
-                <input type="range" class="custom-slider" min="0" max="255" value="128">
+                <div class="slider-label" id="lblA6">2붐 회전 (A6): 128</div>
+                <input type="range" id="sliderA6" class="custom-slider" min="0" max="255" value="128">
             </div>
         </div>
     </div>
@@ -248,46 +225,46 @@
     <div class="control-panel">
         <div class="group-box">
             <div class="group-title">BOOM/OUT</div>
-            <button class="btn-ctrl">BOOM</button>
-            <button class="btn-ctrl">OUT</button>
+            <button class="btn-ctrl" id="btnBoom">BOOM</button>
+            <button class="btn-ctrl" id="btnOut">OUT</button>
         </div>
 
         <div class="group-box">
             <div class="group-title">RPM</div>
-            <button class="btn-ctrl">+ RPM</button>
-            <button class="btn-ctrl">- RPM</button>
+            <button class="btn-ctrl" id="btnRpmPlus">+ RPM</button>
+            <button class="btn-ctrl" id="btnRpmMinus">- RPM</button>
         </div>
 
         <div class="group-box">
             <div class="group-title">토출량(A8)</div>
-            <div class="knob-container"><div class="knob-pointer"></div></div>
-            <div class="knob-val">128</div>
+            <div class="knob-container" id="knobA8"><div class="knob-pointer" id="ptrA8"></div></div>
+            <div class="knob-val" id="valA8">128</div>
         </div>
 
-        <button class="btn-gss">GSS</button>
+        <button class="btn-gss" id="btnGSS">GSS</button>
 
         <div class="group-box">
             <div class="group-title">HORN/JUMP</div>
-            <button class="btn-ctrl">HORN</button>
-            <button class="btn-ctrl">JUMP</button>
+            <button class="btn-ctrl" id="btnHorn">HORN</button>
+            <button class="btn-ctrl" id="btnJump">JUMP</button>
         </div>
 
         <div class="group-box">
             <div class="group-title">PUMP</div>
-            <button class="btn-ctrl">정전</button>
-            <button class="btn-ctrl">역전</button>
+            <button class="btn-ctrl" id="btnPumpFwd">정전</button>
+            <button class="btn-ctrl" id="btnPumpRev">역전</button>
         </div>
 
         <div class="group-box">
             <div class="group-title">BOOM SPD</div>
-            <div class="knob-container"><div class="knob-pointer"></div></div>
-            <div class="knob-val">128</div>
+            <div class="knob-container" id="knobSpd"><div class="knob-pointer" id="ptrSpd"></div></div>
+            <div class="knob-val" id="valSpd">128</div>
         </div>
 
         <div class="group-box">
             <div class="group-title">END HOSE</div>
-            <button class="btn-ctrl">OPEN</button>
-            <button class="btn-ctrl">CLOSE</button>
+            <button class="btn-ctrl" id="btnHoseOpen">OPEN</button>
+            <button class="btn-ctrl" id="btnHoseClose">CLOSE</button>
         </div>
     </div>
 </div>
@@ -299,10 +276,15 @@
     let bleDevice = null;
     let gattCharacteristic = null;
 
+    // 12바이트 TPDO 데이터 패킷
+    let packet = new Uint8Array(12);
+    packet.fill(128, 4, 12); // 아날로그 축 기본값 128 (중립)
+    packet[0] = 0; packet[1] = 0; packet[2] = 0; packet[3] = 0;
+
     async function connectBLE() {
         try {
             const statusDiv = document.getElementById("status");
-            statusDiv.innerText = "기기 검색 중...";
+            statusDiv.innerText = "검색 중...";
 
             bleDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
@@ -322,10 +304,113 @@
                 statusDiv.className = "status-text";
             });
         } catch (error) {
-            console.error(error);
-            alert("연결 오류: " + error);
+            alert("BLE 연결 실패: " + error);
         }
     }
+
+    async function sendPacket() {
+        if (!gattCharacteristic) return;
+        try {
+            await gattCharacteristic.writeValueWithoutResponse(packet);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    // --- 조이스틱 터치 드래그 연산 ---
+    function setupJoystick(areaId, stickId, axisXIndex, axisYIndex) {
+        const area = document.getElementById(areaId);
+        const stick = document.getElementById(stickId);
+        const maxRadius = 35;
+
+        function updateStick(clientX, clientY) {
+            const rect = area.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            let deltaX = clientX - centerX;
+            let deltaY = clientY - centerY;
+            let distance = Math.hypot(deltaX, deltaY);
+
+            if (distance > maxRadius) {
+                deltaX = (deltaX / distance) * maxRadius;
+                deltaY = (deltaY / distance) * maxRadius;
+            }
+
+            stick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+            // 0 ~ 255 정규화
+            packet[axisXIndex] = Math.round(((deltaX / maxRadius) + 1) * 127.5);
+            packet[axisYIndex] = Math.round(((deltaY / maxRadius) + 1) * 127.5);
+            sendPacket();
+        }
+
+        function resetStick() {
+            stick.style.transform = `translate(0px, 0px)`;
+            packet[axisXIndex] = 128;
+            packet[axisYIndex] = 128;
+            sendPacket();
+        }
+
+        area.addEventListener('touchstart', (e) => updateStick(e.touches[0].clientX, e.touches[0].clientY));
+        area.addEventListener('touchmove', (e) => updateStick(e.touches[0].clientX, e.touches[0].clientY));
+        area.addEventListener('touchend', resetStick);
+    }
+
+    setupJoystick('areaLeft', 'stickLeft', 5, 4);   // 4붐/5붐 (Left Stick)
+    setupJoystick('areaRight', 'stickRight', 7, 6); // 스윙/1붐 (Right Stick)
+
+    // --- 슬라이더 2붐 / 3붐 자동 중립 복귀 (Auto Return) ---
+    function setupAutoReturnSlider(sliderId, labelId, labelPrefix, packetIndex) {
+        const slider = document.getElementById(sliderId);
+        const label = document.getElementById(labelId);
+
+        function onInput() {
+            const val = parseInt(slider.value);
+            label.innerText = `${labelPrefix}: ${val}`;
+            packet[packetIndex] = val;
+            sendPacket();
+        }
+
+        function resetSlider() {
+            slider.value = 128;
+            label.innerText = `${labelPrefix}: 128`;
+            packet[packetIndex] = 128;
+            sendPacket();
+        }
+
+        slider.addEventListener('input', onInput);
+        slider.addEventListener('touchend', resetSlider);
+        slider.addEventListener('mouseup', resetSlider);
+    }
+
+    setupAutoReturnSlider('sliderA5', 'lblA5', '3붐 회전 (A5)', 8); // L2 위치 매핑
+    setupAutoReturnSlider('sliderA6', 'lblA6', '2붐 회전 (A6)', 9); // R2 위치 매핑
+
+    // --- 버튼 이벤트 핸들러 ---
+    function bindButton(btnId, bitByte, bitShift) {
+        const btn = document.getElementById(btnId);
+        
+        btn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            btn.classList.add('active');
+            packet[bitByte] |= (1 << bitShift);
+            sendPacket();
+        });
+
+        btn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            btn.classList.remove('active');
+            packet[bitByte] &= ~(1 << bitShift);
+            sendPacket();
+        });
+    }
+
+    bindButton('btnGSS', 2, 5);      // CROSS (GSS Emergency)
+    bindButton('btnPumpFwd', 2, 1);  // 정전
+    bindButton('btnPumpRev', 2, 2);  // 역전
+    bindButton('btnHorn', 3, 1);     // HORN
+    bindButton('btnJump', 3, 5);     // JUMP
 </script>
 
 </body>
