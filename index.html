@@ -18,15 +18,14 @@
             flex-direction: column;
             justify-content: space-between;
             overflow: hidden;
-            touch-action: none;
         }
 
-        /* 상단 바 (연결 버튼 및 상태 표시) */
+        /* 상단 바 */
         .header-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 40px;
+            height: 38px;
             gap: 15px;
         }
         .status {
@@ -52,14 +51,14 @@
             white-space: nowrap;
         }
 
-        /* 메인 컨트롤 영역 (가로 2분할) */
+        /* 메인 조작 패널 (가로 2분할) */
         .main-controls {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: calc(100vh - 65px);
+            height: calc(100vh - 60px);
             width: 100%;
-            gap: 20px;
+            gap: 15px;
         }
 
         .stick-panel {
@@ -75,15 +74,10 @@
             align-items: center;
         }
 
-        .stick-title {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 2px;
-        }
+        .stick-title { font-size: 13px; font-weight: bold; }
         .left-title { color: #5ac8fa; }
         .right-title { color: #30d158; }
 
-        /* 조이스틱 캔버스 크기 - 가로모드 화면 높이에 맞춤 */
         canvas.joy-canvas {
             background: #2c2c2e;
             border-radius: 50%;
@@ -91,54 +85,55 @@
             touch-action: none;
         }
 
-        /* 아날로그 슬라이더 하단 배치 */
+        /* 터치 반응형 슬라이더 스타일 */
         .slider-box {
             width: 90%;
             text-align: center;
             background: #252528;
             padding: 6px 10px;
             border-radius: 8px;
+            touch-action: pan-x; /* 슬라이더 가로 드래그 허용 */
         }
         .slider-label {
             font-size: 11px;
             color: #ffd60a;
             font-weight: bold;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
         }
         input[type=range] {
             width: 100%;
+            height: 25px;
             accent-color: #ffd60a;
             margin: 0;
+            touch-action: pan-x;
         }
     </style>
 </head>
 <body>
 
-    <!-- 상단 바 -->
     <div class="header-bar">
-        <div id="status" class="status disconnected">BLE 미연결 (아이폰을 가로로 돌려주세요)</div>
+        <div id="status" class="status disconnected">BLE 미연결</div>
         <button class="conn-btn" onclick="connectBLE()">ESP32 연결하기</button>
     </div>
 
-    <!-- 가로모드 조종 패널 -->
     <div class="main-controls">
-        <!-- 좌측 3축 조이스틱 (좌/우: 4붐, 위/아래: 5붐, 트위스트: 3붐) -->
+        <!-- 좌측 3축 조이스틱 패널 -->
         <div class="stick-panel">
             <div class="stick-title left-title">좌측 조이스틱 (4붐 / 5붐)</div>
             <canvas id="canvasLeft" class="joy-canvas"></canvas>
             <div class="slider-box">
                 <div class="slider-label">3붐 회전 (A5): <span id="valB3">128</span></div>
-                <input type="range" id="sliderB3" min="0" max="255" value="128" oninput="updateB3(this.value)" ontouchend="resetB3()" onmouseup="resetB3()">
+                <input type="range" id="sliderB3" min="0" max="255" value="128">
             </div>
         </div>
 
-        <!-- 우측 3축 조이스틱 (좌/우: 스윙, 위/아래: 1붐, 트위스트: 2붐) -->
+        <!-- 우측 3축 조이스틱 패널 -->
         <div class="stick-panel">
             <div class="stick-title right-title">우측 조이스틱 (스윙 / 1붐)</div>
             <canvas id="canvasRight" class="joy-canvas"></canvas>
             <div class="slider-box">
                 <div class="slider-label">2붐 회전 (A6): <span id="valB2">128</span></div>
-                <input type="range" id="sliderB2" min="0" max="255" value="128" oninput="updateB2(this.value)" ontouchend="resetB2()" onmouseup="resetB2()">
+                <input type="range" id="sliderB2" min="0" max="255" value="128">
             </div>
         </div>
     </div>
@@ -150,7 +145,6 @@
         let bleDevice = null;
         let gattCharacteristic = null;
 
-        // TPDO 12바이트 패킷 (기본 128 중립)
         let packet = new Uint8Array([0, 0, 0, 0, 128, 128, 128, 128, 128, 128, 128, 128]);
         let sendTimer = null;
         const SEND_INTERVAL_MS = 50;
@@ -170,7 +164,7 @@
                 const service = await server.getPrimaryService(SERVICE_UUID);
                 gattCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
-                statusDiv.innerText = "DY PumpController 연결됨";
+                statusDiv.innerText = "DY Controller 연결됨";
                 statusDiv.className = "status connected";
 
                 bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
@@ -204,23 +198,22 @@
             if (sendTimer) { clearInterval(sendTimer); sendTimer = null; }
         }
 
-        // --- 아날로그 조이스틱 Class ---
-        class AnalogStick {
+        // --- 멀티터치 트래킹 조이스틱 클래스 ---
+        class MultiTouchJoystick {
             constructor(canvasId, onMove) {
                 this.canvas = document.getElementById(canvasId);
                 this.ctx = this.canvas.getContext('2d');
                 this.onMove = onMove;
-                this.active = false;
-                
+                this.touchId = null;
+
                 this.resizeCanvas();
                 this.initEvents();
                 this.draw();
             }
 
             resizeCanvas() {
-                // 패널 높이에 맞춰 캔버스 반응형 크기 설정
                 const panel = this.canvas.parentElement;
-                const size = Math.min(panel.clientWidth * 0.7, panel.clientHeight * 0.55);
+                const size = Math.min(panel.clientWidth * 0.75, panel.clientHeight * 0.55);
                 this.canvas.width = size;
                 this.canvas.height = size;
                 this.radius = size / 2;
@@ -230,25 +223,49 @@
             }
 
             initEvents() {
-                const handleStart = (e) => { this.active = true; this.updatePos(e); };
-                const handleMove = (e) => { if (this.active) this.updatePos(e); };
-                const handleEnd = () => { this.active = false; this.reset(); };
+                // 터치 시작
+                this.canvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    if (this.touchId !== null) return; // 이미 추적 중인 터치 있음
 
-                this.canvas.addEventListener('touchstart', handleStart, {passive: false});
-                this.canvas.addEventListener('touchmove', handleMove, {passive: false});
-                this.canvas.addEventListener('touchend', handleEnd);
-                this.canvas.addEventListener('mousedown', handleStart);
-                window.addEventListener('mousemove', handleMove);
-                window.addEventListener('mouseup', handleEnd);
+                    const touch = e.changedTouches[0];
+                    this.touchId = touch.identifier;
+                    this.updatePos(touch.clientX, touch.clientY);
+                }, { passive: false });
+
+                // 터치 이동 (전체 window에서 해당 touchId 검색)
+                window.addEventListener('touchmove', (e) => {
+                    if (this.touchId === null) return;
+
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        if (e.changedTouches[i].identifier === this.touchId) {
+                            e.preventDefault();
+                            this.updatePos(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+                            break;
+                        }
+                    }
+                }, { passive: false });
+
+                // 터치 해제
+                const handleTouchEnd = (e) => {
+                    if (this.touchId === null) return;
+
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        if (e.changedTouches[i].identifier === this.touchId) {
+                            this.touchId = null;
+                            this.reset();
+                            break;
+                        }
+                    }
+                };
+
+                window.addEventListener('touchend', handleTouchEnd);
+                window.addEventListener('touchcancel', handleTouchEnd);
                 window.addEventListener('resize', () => { this.resizeCanvas(); this.draw(); });
             }
 
-            updatePos(e) {
-                e.preventDefault();
+            updatePos(clientX, clientY) {
                 const rect = this.canvas.getBoundingClientRect();
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
                 let dx = clientX - (rect.left + this.radius);
                 let dy = clientY - (rect.top + this.radius);
                 const distance = Math.hypot(dx, dy);
@@ -289,10 +306,10 @@
                 this.ctx.moveTo(0, this.radius); this.ctx.lineTo(this.canvas.width, this.radius);
                 this.ctx.stroke();
 
-                // 핸들
+                // 조이스틱 핸들
                 this.ctx.beginPath();
                 this.ctx.arc(this.x, this.y, this.handleRadius, 0, Math.PI * 2);
-                this.ctx.fillStyle = this.active ? '#0a84ff' : '#8e8e93';
+                this.ctx.fillStyle = (this.touchId !== null) ? '#0a84ff' : '#8e8e93';
                 this.ctx.fill();
                 this.ctx.strokeStyle = '#fff';
                 this.ctx.lineWidth = 2;
@@ -300,34 +317,42 @@
             }
         }
 
-        // --- 인스턴스 생성 ---
-        const leftStick = new AnalogStick('canvasLeft', (x, y) => {
+        // --- 조이스틱 매핑 ---
+        const leftStick = new MultiTouchJoystick('canvasLeft', (x, y) => {
             packet[7] = x; // 4붐 (좌우)
             packet[8] = y; // 5붐 (상하)
         });
 
-        const rightStick = new AnalogStick('canvasRight', (x, y) => {
+        const rightStick = new MultiTouchJoystick('canvasRight', (x, y) => {
             packet[5] = x; // 스윙 (좌우)
             packet[4] = y; // 1붐 (상하)
         });
 
-        function updateB3(val) {
+        // --- 슬라이더 바인딩 (수동 터치 및 입력 이벤트 완벽 연동) ---
+        const sliderB3 = document.getElementById('sliderB3');
+        const sliderB2 = document.getElementById('sliderB2');
+
+        function updateSliderB3(val) {
             packet[9] = parseInt(val);
             document.getElementById('valB3').innerText = val;
         }
-        function resetB3() {
-            document.getElementById('sliderB3').value = 128;
-            updateB3(128);
-        }
 
-        function updateB2(val) {
+        function updateSliderB2(val) {
             packet[6] = parseInt(val);
             document.getElementById('valB2').innerText = val;
         }
-        function resetB2() {
-            document.getElementById('sliderB2').value = 128;
-            updateB2(128);
-        }
+
+        sliderB3.addEventListener('input', (e) => updateSliderB3(e.target.value));
+        sliderB2.addEventListener('input', (e) => updateSliderB2(e.target.value));
+
+        // 슬라이더 손 떼었을 때 자동 128 중립 복귀
+        const resetSliderB3 = () => { sliderB3.value = 128; updateSliderB3(128); };
+        const resetSliderB2 = () => { sliderB2.value = 128; updateSliderB2(128); };
+
+        sliderB3.addEventListener('touchend', resetSliderB3);
+        sliderB3.addEventListener('mouseup', resetSliderB3);
+        sliderB2.addEventListener('touchend', resetSliderB2);
+        sliderB2.addEventListener('mouseup', resetSliderB2);
     </script>
 </body>
 </html>
