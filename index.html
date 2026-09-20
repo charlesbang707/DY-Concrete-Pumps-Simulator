@@ -3,28 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>DY Concrete Pump 3-Axis Controller</title>
+    <title>DY Concrete Pump Analog Joystick</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #121212; color: #fff; text-align: center; margin: 0; padding: 15px; user-select: none; }
-        .status { padding: 10px; margin-bottom: 15px; border-radius: 8px; background: #2c2c2e; font-weight: bold; font-size: 14px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #121212; color: #fff; text-align: center; margin: 0; padding: 10px; user-select: none; touch-action: none; }
+        .status { padding: 8px; margin-bottom: 10px; border-radius: 8px; background: #2c2c2e; font-weight: bold; font-size: 13px; }
         .connected { color: #30d158; }
         .disconnected { color: #ff453a; }
-        button.conn-btn { background: #0a84ff; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 15px; font-weight: bold; margin-bottom: 15px; width: 100%; max-width: 400px; }
+        button.conn-btn { background: #0a84ff; color: white; border: none; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: bold; width: 100%; max-width: 400px; margin-bottom: 10px; }
         
-        .joystick-container { display: flex; justify-content: space-around; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-        .stick-box { background: #1c1c1e; border: 2px solid #38383a; border-radius: 12px; padding: 10px; width: 45%; min-width: 160px; box-sizing: border-box; }
-        .stick-title { font-size: 14px; font-weight: bold; margin-bottom: 10px; padding: 4px; border-radius: 4px; }
-        .left-title { color: #5ac8fa; border-bottom: 2px solid #5ac8fa; }
-        .right-title { color: #30d158; border-bottom: 2px solid #30d158; }
+        .joystick-container { display: flex; justify-content: space-around; gap: 10px; flex-wrap: wrap; }
+        .stick-box { background: #1c1c1e; border: 2px solid #38383a; border-radius: 12px; padding: 10px; width: 48%; min-width: 165px; box-sizing: border-box; }
+        .stick-title { font-size: 13px; font-weight: bold; margin-bottom: 8px; }
+        .left-title { color: #5ac8fa; }
+        .right-title { color: #30d158; }
         
-        .grid-3x3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
-        .joy-btn { background: #2c2c2e; color: #fff; border: 1px solid #48484a; border-radius: 6px; padding: 12px 0; font-size: 11px; font-weight: bold; touch-action: manipulation; }
-        .joy-btn:active { background: #0a84ff; }
+        /* 2D 조이스틱 캔버스 */
+        canvas.joy-canvas { background: #2c2c2e; border-radius: 50%; border: 2px solid #545456; touch-action: none; display: block; margin: 0 auto; }
         
-        .twist-box { display: flex; justify-content: space-between; gap: 6px; margin-top: 6px; background: #252528; padding: 6px; border-radius: 6px; }
-        .twist-btn { background: #3a3a3c; color: #ffd60a; border: 1px solid #545456; border-radius: 4px; padding: 8px 0; width: 48%; font-size: 11px; font-weight: bold; }
-        
-        .center-btn { background: #ff3b30; color: #fff; border: none; }
+        /* 아날로그 슬라이더 */
+        .slider-box { margin-top: 12px; text-align: center; }
+        .slider-label { font-size: 11px; color: #ffd60a; margin-bottom: 4px; font-weight: bold; }
+        input[type=range] { width: 90%; accent-color: #ffd60a; }
     </style>
 </head>
 <body>
@@ -33,47 +32,23 @@
     <button class="conn-btn" onclick="connectBLE()">ESP32 연결하기</button>
 
     <div class="joystick-container">
-        <!-- 좌측 3축 조이스틱 (3붐, 4붐, 5붐) -->
+        <!-- 좌측 3축 아날로그 조이스틱 -->
         <div class="stick-box">
-            <div class="stick-title left-title">좌측 조이스틱 (A1/A2/A5)</div>
-            <div class="grid-3x3">
-                <div></div>
-                <button class="joy-btn" ontouchstart="pressJoy('B5_UP')" ontouchend="stopPress()" onmousedown="pressJoy('B5_UP')" onmouseup="stopPress()">5붐 UP<br>(A1/H1)</button>
-                <div></div>
-                
-                <button class="joy-btn" ontouchstart="pressJoy('B4_LEFT')" ontouchend="stopPress()" onmousedown="pressJoy('B4_LEFT')" onmouseup="stopPress()">4붐 접힘<br>(A2/L2)</button>
-                <button class="joy-btn center-btn" onclick="resetNeutral()">정지</button>
-                <button class="joy-btn" ontouchstart="pressJoy('B4_RIGHT')" ontouchend="stopPress()" onmousedown="pressJoy('B4_RIGHT')" onmouseup="stopPress()">4붐 펼침<br>(A2/H2)</button>
-                
-                <div></div>
-                <button class="joy-btn" ontouchstart="pressJoy('B5_DOWN')" ontouchend="stopPress()" onmousedown="pressJoy('B5_DOWN')" onmouseup="stopPress()">5붐 DOWN<br>(A1/L1)</button>
-                <div></div>
-            </div>
-            <div class="twist-box">
-                <button class="twist-btn" ontouchstart="pressJoy('B3_CCW')" ontouchend="stopPress()" onmousedown="pressJoy('B3_CCW')" onmouseup="stopPress()">↺ 3붐 접힘 (A5/L5)</button>
-                <button class="twist-btn" ontouchstart="pressJoy('B3_CW')" ontouchend="stopPress()" onmousedown="pressJoy('B3_CW')" onmouseup="stopPress()">↻ 3붐 펼침 (A5/H5)</button>
+            <div class="stick-title left-title">좌측 조이스틱 (4붐 / 5붐)</div>
+            <canvas id="canvasLeft" class="joy-canvas" width="140" height="140"></canvas>
+            <div class="slider-box">
+                <div class="slider-label">3붐 회전 (A5): <span id="valB3">128</span></div>
+                <input type="range" id="sliderB3" min="0" max="255" value="128" oninput="updateB3(this.value)" ontouchend="resetB3()" onmouseup="resetB3()">
             </div>
         </div>
 
-        <!-- 우측 3축 조이스틱 (스윙, 1붐, 2붐) -->
+        <!-- 우측 3축 아날로그 조이스틱 -->
         <div class="stick-box">
-            <div class="stick-title right-title">우측 조이스틱 (A3/A4/A6)</div>
-            <div class="grid-3x3">
-                <div></div>
-                <button class="joy-btn" ontouchstart="pressJoy('B1_UP')" ontouchend="stopPress()" onmousedown="pressJoy('B1_UP')" onmouseup="stopPress()">1붐 UP<br>(A3/H3)</button>
-                <div></div>
-                
-                <button class="joy-btn" ontouchstart="pressJoy('SWING_L')" ontouchend="stopPress()" onmousedown="pressJoy('SWING_L')" onmouseup="stopPress()">스윙 좌<br>(A4/L4)</button>
-                <button class="joy-btn center-btn" onclick="resetNeutral()">정지</button>
-                <button class="joy-btn" ontouchstart="pressJoy('SWING_R')" ontouchend="stopPress()" onmousedown="pressJoy('SWING_R')" onmouseup="stopPress()">스윙 우<br>(A4/H4)</button>
-                
-                <div></div>
-                <button class="joy-btn" ontouchstart="pressJoy('B1_DOWN')" ontouchend="stopPress()" onmousedown="pressJoy('B1_DOWN')" onmouseup="stopPress()">1붐 DOWN<br>(A3/L3)</button>
-                <div></div>
-            </div>
-            <div class="twist-box">
-                <button class="twist-btn" ontouchstart="pressJoy('B2_CCW')" ontouchend="stopPress()" onmousedown="pressJoy('B2_CCW')" onmouseup="stopPress()">↺ 2붐 Down (A6/L6)</button>
-                <button class="twist-btn" ontouchstart="pressJoy('B2_CW')" ontouchend="stopPress()" onmousedown="pressJoy('B2_CW')" onmouseup="stopPress()">↻ 2붐 Up (A6/H6)</button>
+            <div class="stick-title right-title">우측 조이스틱 (스윙 / 1붐)</div>
+            <canvas id="canvasRight" class="joy-canvas" width="140" height="140"></canvas>
+            <div class="slider-box">
+                <div class="slider-label">2붐 회전 (A6): <span id="valB2">128</span></div>
+                <input type="range" id="sliderB2" min="0" max="255" value="128" oninput="updateB2(this.value)" ontouchend="resetB2()" onmouseup="resetB2()">
             </div>
         </div>
     </div>
@@ -85,7 +60,7 @@
         let bleDevice = null;
         let gattCharacteristic = null;
 
-        // 12바이트 TPDO 데이터 배열 (기본값: 모두 128/0x80 중립)
+        // TPDO 12바이트 패킷 (기본 128 아날로그 중립)
         let packet = new Uint8Array([0, 0, 0, 0, 128, 128, 128, 128, 128, 128, 128, 128]);
         let sendTimer = null;
         const SEND_INTERVAL_MS = 50; // 50ms (초당 20회 연속 전송)
@@ -118,9 +93,8 @@
         }
 
         function onDisconnected() {
-            const statusDiv = document.getElementById("status");
-            statusDiv.innerText = "연결 끊김";
-            statusDiv.className = "status disconnected";
+            document.getElementById("status").innerText = "연결 끊김";
+            document.getElementById("status").className = "status disconnected";
             stopPeriodicSend();
         }
 
@@ -137,49 +111,128 @@
         }
 
         function stopPeriodicSend() {
-            if (sendTimer) {
-                clearInterval(sendTimer);
-                sendTimer = null;
+            if (sendTimer) { clearInterval(sendTimer); sendTimer = null; }
+        }
+
+        // --- 아날로그 조이스틱 Canvas 터치 제어 클래스 ---
+        class AnalogStick {
+            constructor(canvasId, onMove) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.radius = this.canvas.width / 2;
+                this.handleRadius = 22;
+                this.x = this.radius;
+                this.y = this.radius;
+                this.active = false;
+                this.onMove = onMove;
+
+                this.initEvents();
+                this.draw();
+            }
+
+            initEvents() {
+                const handleStart = (e) => { this.active = true; this.updatePos(e); };
+                const handleMove = (e) => { if (this.active) this.updatePos(e); };
+                const handleEnd = () => { this.active = false; this.reset(); };
+
+                this.canvas.addEventListener('touchstart', handleStart, {passive: false});
+                this.canvas.addEventListener('touchmove', handleMove, {passive: false});
+                this.canvas.addEventListener('touchend', handleEnd);
+                this.canvas.addEventListener('mousedown', handleStart);
+                window.addEventListener('mousemove', handleMove);
+                window.addEventListener('mouseup', handleEnd);
+            }
+
+            updatePos(e) {
+                e.preventDefault();
+                const rect = this.canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                let dx = clientX - (rect.left + this.radius);
+                let dy = clientY - (rect.top + this.radius);
+                const distance = Math.hypot(dx, dy);
+                const maxDist = this.radius - this.handleRadius;
+
+                if (distance > maxDist) {
+                    dx = (dx / distance) * maxDist;
+                    dy = (dy / distance) * maxDist;
+                }
+
+                this.x = this.radius + dx;
+                this.y = this.radius + dy;
+                this.draw();
+
+                // -1.0 ~ +1.0 정규화 후 0 ~ 255 아날로그 값으로 매핑
+                const normX = dx / maxDist;
+                const normY = dy / maxDist;
+                const analogX = Math.round(128 + normX * 127);
+                const analogY = Math.round(128 + normY * 127);
+
+                this.onMove(analogX, analogY);
+            }
+
+            reset() {
+                this.x = this.radius;
+                this.y = this.radius;
+                this.draw();
+                this.onMove(128, 128); // 중립 복귀
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 배경 가이드선
+                this.ctx.strokeStyle = '#48484a';
+                this.ctx.lineWidth = 1;
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.radius, 0); this.ctx.lineTo(this.radius, this.canvas.height);
+                this.ctx.moveTo(0, this.radius); this.ctx.lineTo(this.canvas.width, this.radius);
+                this.ctx.stroke();
+
+                // 조이스틱 핸들
+                this.ctx.beginPath();
+                this.ctx.arc(this.x, this.y, this.handleRadius, 0, Math.PI * 2);
+                this.ctx.fillStyle = this.active ? '#0a84ff' : '#8e8e93';
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#fff';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
             }
         }
 
-        // 조이스틱 버튼 작동 제어
-        function pressJoy(action) {
-            // 초기화
-            resetNeutral();
+        // --- 조이스틱 매핑 초기화 ---
+        
+        // 1. 좌측 조이스틱 (X: 4붐 / Y: 5붐)
+        const leftStick = new AnalogStick('canvasLeft', (x, y) => {
+            packet[7] = x; // A2 (4붐: 0~255)
+            packet[8] = y; // A1 (5붐: 0~255)
+        });
 
-            switch (action) {
-                // [우측 조이스틱]
-                case 'SWING_L':  packet[5] = 1;   break; // A4/L4 (좌)
-                case 'SWING_R':  packet[5] = 255; break; // A4/H4 (우)
-                case 'B1_UP':    packet[4] = 1;   break; // A3/H3 (상)
-                case 'B1_DOWN':  packet[4] = 255; break; // A3/L3 (하)
-                case 'B2_CCW':   packet[6] = 1;   break; // A6/L6 (노브 반시계)
-                case 'B2_CW':    packet[6] = 255; break; // A6/H6 (노브 시계)
+        // 2. 우측 조이스틱 (X: 스윙 / Y: 1붐)
+        const rightStick = new AnalogStick('canvasRight', (x, y) => {
+            packet[5] = x; // A4 (스윙: 0~255)
+            packet[4] = y; // A3 (1붐: 0~255)
+        });
 
-                // [좌측 조이스틱]
-                case 'B3_CCW':   packet[9] = 1;   break; // A5/L5 (노브 반시계)
-                case 'B3_CW':    packet[9] = 255; break; // A5/H5 (노브 시계)
-                case 'B4_LEFT':  packet[7] = 1;   break; // A2/L2 (좌)
-                case 'B4_RIGHT': packet[7] = 255; break; // A2/H2 (우)
-                case 'B5_UP':    packet[8] = 1;   break; // A1/H1 (상)
-                case 'B5_DOWN':  packet[8] = 255; break; // A1/L1 (하)
-            }
+        // 3. 3붐 (좌측 Z축 회전)
+        function updateB3(val) {
+            packet[9] = parseInt(val);
+            document.getElementById('valB3').innerText = val;
+        }
+        function resetB3() {
+            document.getElementById('sliderB3').value = 128;
+            updateB3(128);
         }
 
-        // 손을 떼었을 때 중립 상태(128 / 0x80) 복귀
-        function stopPress() {
-            resetNeutral();
+        // 4. 2붐 (우측 Z축 회전)
+        function updateB2(val) {
+            packet[6] = parseInt(val);
+            document.getElementById('valB2').innerText = val;
         }
-
-        function resetNeutral() {
-            for (let i = 4; i < 12; i++) {
-                packet[i] = 128; // 0x80
-            }
-            packet[0] = 0;
-            packet[1] = 0;
-            packet[2] = 0;
-            packet[3] = 0;
+        function resetB2() {
+            document.getElementById('sliderB2').value = 128;
+            updateB2(128);
         }
     </script>
 </body>
