@@ -28,13 +28,12 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
-        /* 아이폰 여백(Safe Area) 고려 전체 화면 컨테이너 */
         .app-container {
             display: flex;
             flex-direction: column;
             width: 100%;
             height: 100%;
-            padding: calc(4px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
+            padding: calc(4px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
             box-sizing: border-box;
             gap: 6px;
         }
@@ -88,8 +87,8 @@
         .card-title { font-size: 11px; color: #0a84ff; font-weight: bold; }
 
         .stick-area {
-            width: 90px;
-            height: 90px;
+            width: 86px;
+            height: 86px;
             border-radius: 50%;
             background: #282830;
             border: 2px solid #3a3a45;
@@ -107,8 +106,7 @@
             border: 2px solid #ffffff;
             position: absolute;
             box-shadow: 0 3px 6px rgba(0,0,0,0.5);
-            left: 25px;
-            top: 25px;
+            pointer-events: none;
         }
 
         .slider-box {
@@ -154,7 +152,6 @@
             font-weight: bold;
         }
 
-        /* 버튼 토글 활성화 하이라이트 */
         .btn-ctrl.active {
             background: #0a84ff;
             color: #ffffff;
@@ -175,7 +172,6 @@
         }
         .btn-gss.active { transform: scale(0.92); box-shadow: 0 0 18px rgba(255, 69, 58, 1); }
 
-        /* 노브 상호작용 스타일 */
         .knob-container {
             width: 36px;
             height: 36px;
@@ -236,52 +232,45 @@
     </div>
 
     <div class="control-panel">
-        <!-- BOOM/OUT 선택 (토글 모드) -->
         <div class="group-box">
             <div class="group-title">BOOM/OUT</div>
             <button class="btn-ctrl active" id="btnBoom">BOOM</button>
             <button class="btn-ctrl" id="btnOut">OUT</button>
         </div>
 
-        <!-- RPM 조절 -->
         <div class="group-box">
             <div class="group-title">RPM</div>
             <button class="btn-ctrl" id="btnRpmPlus">+ RPM</button>
             <button class="btn-ctrl" id="btnRpmMinus">- RPM</button>
         </div>
 
-        <!-- 토출량 노브 (드래그 조절) -->
         <div class="group-box">
             <div class="group-title">토출량(A8)</div>
             <div class="knob-container" id="knobA8"><div class="knob-pointer" id="ptrA8"></div></div>
             <div class="knob-val" id="valA8">128</div>
         </div>
 
-        <!-- 비상정지 -->
         <button class="btn-gss" id="btnGSS">GSS</button>
 
-        <!-- HORN / JUMP -->
         <div class="group-box">
             <div class="group-title">HORN/JUMP</div>
             <button class="btn-ctrl" id="btnHorn">HORN</button>
             <button class="btn-ctrl" id="btnJump">JUMP</button>
         </div>
 
-        <!-- PUMP 선택 (토글 모드) -->
+        <!-- PUMP (정전 / 역전 / 중립) 토글 -->
         <div class="group-box">
             <div class="group-title">PUMP</div>
             <button class="btn-ctrl" id="btnPumpFwd">정전</button>
             <button class="btn-ctrl" id="btnPumpRev">역전</button>
         </div>
 
-        <!-- BOOM SPD 노브 (드래그 조절) -->
         <div class="group-box">
             <div class="group-title">BOOM SPD</div>
             <div class="knob-container" id="knobSpd"><div class="knob-pointer" id="ptrSpd"></div></div>
             <div class="knob-val" id="valSpd">128</div>
         </div>
 
-        <!-- END HOSE -->
         <div class="group-box">
             <div class="group-title">END HOSE</div>
             <button class="btn-ctrl" id="btnHoseOpen">OPEN</button>
@@ -296,10 +285,12 @@
 
     let bleDevice = null;
     let gattCharacteristic = null;
+    let sendIntervalTimer = null;
+    let isSending = false;
 
-    // 12바이트 TPDO 데이터 구조 초기화
+    // 12바이트 TPDO 데이터 구조
     let packet = new Uint8Array(12);
-    packet.fill(128, 4, 12); // 아날로그 축 128 중립
+    packet.fill(128, 4, 12); // 아날로그 축 128 (중립)
     packet[0] = 0; packet[1] = 0; packet[2] = 0; packet[3] = 0;
 
     async function connectBLE() {
@@ -320,37 +311,56 @@
             statusDiv.innerText = "WROVER 연결됨";
             statusDiv.className = "status-text connected";
 
+            // 80ms 주기적 연속 전송 시작
+            startSendingLoop();
+
             bleDevice.addEventListener('gattserverdisconnected', () => {
                 statusDiv.innerText = "BLE 연결 끊김";
                 statusDiv.className = "status-text";
+                stopSendingLoop();
             });
         } catch (error) {
             alert("BLE 연결 실패: " + error);
         }
     }
 
-    async function sendPacket() {
-        if (!gattCharacteristic) return;
-        try {
-            await gattCharacteristic.writeValueWithoutResponse(packet);
-        } catch (e) {
-            console.error(e);
+    // 80ms 타임슬롯 연속 패킷 전송 함수
+    function startSendingLoop() {
+        if (sendIntervalTimer) clearInterval(sendIntervalTimer);
+        sendIntervalTimer = setInterval(async () => {
+            if (!gattCharacteristic || isSending) return;
+            try {
+                isSending = true;
+                await gattCharacteristic.writeValueWithoutResponse(packet);
+            } catch (e) {
+                console.error("전송 에러:", e);
+            } finally {
+                isSending = false;
+            }
+        }, 80); // 80ms 주기 전송
+    }
+
+    function stopSendingLoop() {
+        if (sendIntervalTimer) {
+            clearInterval(sendIntervalTimer);
+            sendIntervalTimer = null;
         }
     }
 
-    // --- 1. 조이스틱 드래그 제어 ---
+    // --- 1. 가로모드 좌표 완전 보정 조이스틱 ---
     function setupJoystick(areaId, stickId, axisXIndex, axisYIndex) {
         const area = document.getElementById(areaId);
         const stick = document.getElementById(stickId);
-        const maxRadius = 27;
+        const maxRadius = 25;
 
-        function updateStick(clientX, clientY) {
-            const rect = area.getBoundingClientRect();
+        function updateStick(e) {
+            const touch = e.touches[0];
+            const rect = area.getBoundingClientRect(); // 실시간 가로/세로 영역 계산
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
 
-            let deltaX = clientX - centerX;
-            let deltaY = clientY - centerY;
+            let deltaX = touch.clientX - centerX;
+            let deltaY = touch.clientY - centerY;
             let distance = Math.hypot(deltaX, deltaY);
 
             if (distance > maxRadius) {
@@ -361,23 +371,21 @@
             stick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
             packet[axisXIndex] = Math.round(((deltaX / maxRadius) + 1) * 127.5);
             packet[axisYIndex] = Math.round(((deltaY / maxRadius) + 1) * 127.5);
-            sendPacket();
         }
 
         function resetStick() {
             stick.style.transform = `translate(0px, 0px)`;
             packet[axisXIndex] = 128;
             packet[axisYIndex] = 128;
-            sendPacket();
         }
 
-        area.addEventListener('touchstart', (e) => updateStick(e.touches[0].clientX, e.touches[0].clientY));
-        area.addEventListener('touchmove', (e) => updateStick(e.touches[0].clientX, e.touches[0].clientY));
-        area.addEventListener('touchend', resetStick);
+        area.addEventListener('touchstart', (e) => { e.preventDefault(); updateStick(e); });
+        area.addEventListener('touchmove', (e) => { e.preventDefault(); updateStick(e); });
+        area.addEventListener('touchend', (e) => { e.preventDefault(); resetStick(); });
     }
 
-    setupJoystick('areaLeft', 'stickLeft', 5, 4);   // 4붐/5붐 (Left Stick)
-    setupJoystick('areaRight', 'stickRight', 7, 6); // 스윙/1붐 (Right Stick)
+    setupJoystick('areaLeft', 'stickLeft', 5, 4);   // 4붐/5붐
+    setupJoystick('areaRight', 'stickRight', 7, 6); // 스윙/1붐
 
     // --- 2. 슬라이더 자동 중립 복귀 ---
     function setupAutoReturnSlider(sliderId, labelId, labelPrefix, packetIndex) {
@@ -388,14 +396,12 @@
             const val = parseInt(slider.value);
             label.innerText = `${labelPrefix}: ${val}`;
             packet[packetIndex] = val;
-            sendPacket();
         }
 
         function resetSlider() {
             slider.value = 128;
             label.innerText = `${labelPrefix}: 128`;
             packet[packetIndex] = 128;
-            sendPacket();
         }
 
         slider.addEventListener('input', onInput);
@@ -406,106 +412,104 @@
     setupAutoReturnSlider('sliderA5', 'lblA5', '3붐 회전 (A5)', 8);
     setupAutoReturnSlider('sliderA6', 'lblA6', '2붐 회전 (A6)', 9);
 
-    // --- 3. 노브 (토출량 & BOOM SPD) 상호작용 드래그 제어 ---
+    // --- 3. 노브 (토출량 & BOOM SPD) ---
     function setupKnob(knobId, ptrId, valId, packetIndex) {
         const knob = document.getElementById(knobId);
         const ptr = document.getElementById(ptrId);
         const valTxt = document.getElementById(valId);
-        
         let startY = 0;
         let startVal = 128;
 
-        function onTouchStart(e) {
+        knob.addEventListener('touchstart', (e) => {
+            e.preventDefault();
             startY = e.touches[0].clientY;
             startVal = packet[packetIndex];
-        }
+        });
 
-        function onTouchMove(e) {
-            let deltaY = startY - e.touches[0].clientY; // 위로 올리면 증가
+        knob.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            let deltaY = startY - e.touches[0].clientY;
             let newVal = Math.min(255, Math.max(0, startVal + Math.round(deltaY * 1.5)));
             
             packet[packetIndex] = newVal;
             valTxt.innerText = newVal;
 
-            // -135도 ~ +135도 각도 변환
             let deg = -135 + (newVal / 255) * 270;
             ptr.style.transform = `rotate(${deg}deg)`;
-            sendPacket();
-        }
-
-        knob.addEventListener('touchstart', onTouchStart);
-        knob.addEventListener('touchmove', onTouchMove);
+        });
     }
 
-    setupKnob('knobA8', 'ptrA8', 'valA8', 10);  // 토출량 (A8)
-    setupKnob('knobSpd', 'ptrSpd', 'valSpd', 11); // 붐 속도 (BOOM SPD)
+    setupKnob('knobA8', 'ptrA8', 'valA8', 10);
+    setupKnob('knobSpd', 'ptrSpd', 'valSpd', 11);
 
-    // --- 4. 버튼 이벤트 처리 (Momentary & Toggle) ---
+    // --- 4. 버튼 이벤트 (Momentary 및 3단 토클 PUMP) ---
     function bindMomentaryBtn(btnId, bitByte, bitShift) {
         const btn = document.getElementById(btnId);
         btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             btn.classList.add('active');
             packet[bitByte] |= (1 << bitShift);
-            sendPacket();
         });
         btn.addEventListener('touchend', (e) => {
             e.preventDefault();
             btn.classList.remove('active');
             packet[bitByte] &= ~(1 << bitShift);
-            sendPacket();
         });
     }
 
-    // BOOM/OUT 선택 토글 스위치 (Byte 0)
+    // BOOM / OUT 모드 선택
     const btnBoom = document.getElementById('btnBoom');
     const btnOut = document.getElementById('btnOut');
 
-    btnBoom.addEventListener('click', () => {
+    btnBoom.addEventListener('touchstart', (e) => {
+        e.preventDefault();
         btnBoom.classList.add('active');
         btnOut.classList.remove('active');
-        packet[0] &= ~(1 << 0); // BOOM 모드
-        sendPacket();
+        packet[0] &= ~(1 << 0);
     });
 
-    btnOut.addEventListener('click', () => {
+    btnOut.addEventListener('touchstart', (e) => {
+        e.preventDefault();
         btnOut.classList.add('active');
         btnBoom.classList.remove('active');
-        packet[0] |= (1 << 0);  // OUT 모드
-        sendPacket();
+        packet[0] |= (1 << 0);
     });
 
-    // PUMP 정전/역전 선택 토글 스위치 (Byte 2)
+    // PUMP 정전/역전/중립 3단 토글 스위치 (Byte 2)
     const btnPumpFwd = document.getElementById('btnPumpFwd');
     const btnPumpRev = document.getElementById('btnPumpRev');
 
-    btnPumpFwd.addEventListener('click', () => {
+    btnPumpFwd.addEventListener('touchstart', (e) => {
+        e.preventDefault();
         if (btnPumpFwd.classList.contains('active')) {
+            // 정전 OFF -> 중립
             btnPumpFwd.classList.remove('active');
-            packet[2] &= ~(1 << 1); // 펌프 OFF
+            packet[2] &= ~(1 << 1);
         } else {
+            // 정전 ON
             btnPumpFwd.classList.add('active');
             btnPumpRev.classList.remove('active');
-            packet[2] |= (1 << 1);  // 정전 ON
-            packet[2] &= ~(1 << 2); // 역전 OFF
+            packet[2] |= (1 << 1);
+            packet[2] &= ~(1 << 2);
         }
-        sendPacket();
     });
 
-    btnPumpRev.addEventListener('click', () => {
+    btnPumpRev.addEventListener('touchstart', (e) => {
+        e.preventDefault();
         if (btnPumpRev.classList.contains('active')) {
+            // 역전 OFF -> 중립
             btnPumpRev.classList.remove('active');
-            packet[2] &= ~(1 << 2); // 펌프 OFF
+            packet[2] &= ~(1 << 2);
         } else {
+            // 역전 ON
             btnPumpRev.classList.add('active');
             btnPumpFwd.classList.remove('active');
-            packet[2] |= (1 << 2);  // 역전 ON
-            packet[2] &= ~(1 << 1); // 정전 OFF
+            packet[2] |= (1 << 2);
+            packet[2] &= ~(1 << 1);
         }
-        sendPacket();
     });
 
-    // 기타 순간작동(Momentary) 버튼
+    // 순간작동 버튼
     bindMomentaryBtn('btnGSS', 2, 5);       // GSS 비상정지
     bindMomentaryBtn('btnRpmPlus', 3, 3);   // RPM +
     bindMomentaryBtn('btnRpmMinus', 3, 4);  // RPM -
