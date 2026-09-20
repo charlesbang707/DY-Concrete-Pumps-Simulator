@@ -3,49 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ESP32 WROVER BLE Controller</title>
+    <title>DY Concrete Pump 3-Axis Controller</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #1c1c1e; color: #fff; text-align: center; margin: 0; padding: 20px; user-select: none; }
-        .status { padding: 12px; margin-bottom: 20px; border-radius: 8px; background: #2c2c2e; font-weight: bold; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #121212; color: #fff; text-align: center; margin: 0; padding: 15px; user-select: none; }
+        .status { padding: 10px; margin-bottom: 15px; border-radius: 8px; background: #2c2c2e; font-weight: bold; font-size: 14px; }
         .connected { color: #30d158; }
         .disconnected { color: #ff453a; }
-        .btn-group { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
-        button { background: #0a84ff; color: white; border: none; padding: 15px 25px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; touch-action: manipulation; }
-        button:active { background: #0056b3; }
-        button.red { background: #ff453a; }
-        button.green { background: #30d158; }
-        .joystick-panel { display: grid; grid-template-columns: repeat(3, 80px); gap: 10px; justify-content: center; margin-top: 20px; }
-        .joy-btn { width: 80px; height: 80px; padding: 0; line-height: 80px; font-size: 14px; }
+        button.conn-btn { background: #0a84ff; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 15px; font-weight: bold; margin-bottom: 15px; width: 100%; max-width: 400px; }
+        
+        .joystick-container { display: flex; justify-content: space-around; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .stick-box { background: #1c1c1e; border: 2px solid #38383a; border-radius: 12px; padding: 10px; width: 45%; min-width: 160px; box-sizing: border-box; }
+        .stick-title { font-size: 14px; font-weight: bold; margin-bottom: 10px; padding: 4px; border-radius: 4px; }
+        .left-title { color: #5ac8fa; border-bottom: 2px solid #5ac8fa; }
+        .right-title { color: #30d158; border-bottom: 2px solid #30d158; }
+        
+        .grid-3x3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+        .joy-btn { background: #2c2c2e; color: #fff; border: 1px solid #48484a; border-radius: 6px; padding: 12px 0; font-size: 11px; font-weight: bold; touch-action: manipulation; }
+        .joy-btn:active { background: #0a84ff; }
+        
+        .twist-box { display: flex; justify-content: space-between; gap: 6px; margin-top: 6px; background: #252528; padding: 6px; border-radius: 6px; }
+        .twist-btn { background: #3a3a3c; color: #ffd60a; border: 1px solid #545456; border-radius: 4px; padding: 8px 0; width: 48%; font-size: 11px; font-weight: bold; }
+        
+        .center-btn { background: #ff3b30; color: #fff; border: none; }
     </style>
 </head>
 <body>
 
-    <h2>Pump Simulator Controller</h2>
     <div id="status" class="status disconnected">BLE 미연결</div>
+    <button class="conn-btn" onclick="connectBLE()">ESP32 연결하기</button>
 
-    <button onclick="connectBLE()">ESP32 연결하기</button>
+    <div class="joystick-container">
+        <!-- 좌측 3축 조이스틱 (3붐, 4붐, 5붐) -->
+        <div class="stick-box">
+            <div class="stick-title left-title">좌측 조이스틱 (A1/A2/A5)</div>
+            <div class="grid-3x3">
+                <div></div>
+                <button class="joy-btn" ontouchstart="pressJoy('B5_UP')" ontouchend="stopPress()" onmousedown="pressJoy('B5_UP')" onmouseup="stopPress()">5붐 UP<br>(A1/H1)</button>
+                <div></div>
+                
+                <button class="joy-btn" ontouchstart="pressJoy('B4_LEFT')" ontouchend="stopPress()" onmousedown="pressJoy('B4_LEFT')" onmouseup="stopPress()">4붐 접힘<br>(A2/L2)</button>
+                <button class="joy-btn center-btn" onclick="resetNeutral()">정지</button>
+                <button class="joy-btn" ontouchstart="pressJoy('B4_RIGHT')" ontouchend="stopPress()" onmousedown="pressJoy('B4_RIGHT')" onmouseup="stopPress()">4붐 펼침<br>(A2/H2)</button>
+                
+                <div></div>
+                <button class="joy-btn" ontouchstart="pressJoy('B5_DOWN')" ontouchend="stopPress()" onmousedown="pressJoy('B5_DOWN')" onmouseup="stopPress()">5붐 DOWN<br>(A1/L1)</button>
+                <div></div>
+            </div>
+            <div class="twist-box">
+                <button class="twist-btn" ontouchstart="pressJoy('B3_CCW')" ontouchend="stopPress()" onmousedown="pressJoy('B3_CCW')" onmouseup="stopPress()">↺ 3붐 접힘 (A5/L5)</button>
+                <button class="twist-btn" ontouchstart="pressJoy('B3_CW')" ontouchend="stopPress()" onmousedown="pressJoy('B3_CW')" onmouseup="stopPress()">↻ 3붐 펼침 (A5/H5)</button>
+            </div>
+        </div>
 
-    <hr style="border-color: #38383a; margin: 25px 0;">
-
-    <!-- 주요 동작 버튼 (눌렀을 때 토글/전송) -->
-    <div class="btn-group">
-        <button class="green" onclick="toggleButton('CROSS')">PUMP START</button>
-        <button onclick="sendPulse('TRIANGLE')">S-VALVE</button>
-        <button class="red" onclick="toggleButton('SQUARE')">EMERGENCY</button>
-    </div>
-
-    <!-- 붐대 제어 패널 (누르고 있는 동안 연속 신호 송신) -->
-    <h3>Boom Control</h3>
-    <div class="joystick-panel">
-        <div></div>
-        <button class="joy-btn" ontouchstart="startPress(0, -127)" ontouchend="stopPress()" onmousedown="startPress(0, -127)" onmouseup="stopPress()">UP</button>
-        <div></div>
-        <button class="joy-btn" ontouchstart="startPress(-127, 0)" ontouchend="stopPress()" onmousedown="startPress(-127, 0)" onmouseup="stopPress()">LEFT</button>
-        <button class="joy-btn red" onclick="resetNeutral()">STOP</button>
-        <button class="joy-btn" ontouchstart="startPress(127, 0)" ontouchend="stopPress()" onmousedown="startPress(127, 0)" onmouseup="stopPress()">RIGHT</button>
-        <div></div>
-        <button class="joy-btn" ontouchstart="startPress(0, 127)" ontouchend="stopPress()" onmousedown="startPress(0, 127)" onmouseup="stopPress()">DOWN</button>
-        <div></div>
+        <!-- 우측 3축 조이스틱 (스윙, 1붐, 2붐) -->
+        <div class="stick-box">
+            <div class="stick-title right-title">우측 조이스틱 (A3/A4/A6)</div>
+            <div class="grid-3x3">
+                <div></div>
+                <button class="joy-btn" ontouchstart="pressJoy('B1_UP')" ontouchend="stopPress()" onmousedown="pressJoy('B1_UP')" onmouseup="stopPress()">1붐 UP<br>(A3/H3)</button>
+                <div></div>
+                
+                <button class="joy-btn" ontouchstart="pressJoy('SWING_L')" ontouchend="stopPress()" onmousedown="pressJoy('SWING_L')" onmouseup="stopPress()">스윙 좌<br>(A4/L4)</button>
+                <button class="joy-btn center-btn" onclick="resetNeutral()">정지</button>
+                <button class="joy-btn" ontouchstart="pressJoy('SWING_R')" ontouchend="stopPress()" onmousedown="pressJoy('SWING_R')" onmouseup="stopPress()">스윙 우<br>(A4/H4)</button>
+                
+                <div></div>
+                <button class="joy-btn" ontouchstart="pressJoy('B1_DOWN')" ontouchend="stopPress()" onmousedown="pressJoy('B1_DOWN')" onmouseup="stopPress()">1붐 DOWN<br>(A3/L3)</button>
+                <div></div>
+            </div>
+            <div class="twist-box">
+                <button class="twist-btn" ontouchstart="pressJoy('B2_CCW')" ontouchend="stopPress()" onmousedown="pressJoy('B2_CCW')" onmouseup="stopPress()">↺ 2붐 Down (A6/L6)</button>
+                <button class="twist-btn" ontouchstart="pressJoy('B2_CW')" ontouchend="stopPress()" onmousedown="pressJoy('B2_CW')" onmouseup="stopPress()">↻ 2붐 Up (A6/H6)</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -55,10 +85,10 @@
         let bleDevice = null;
         let gattCharacteristic = null;
 
-        // TPDO 12바이트 패킷
+        // 12바이트 TPDO 데이터 배열 (기본값: 모두 128/0x80 중립)
         let packet = new Uint8Array([0, 0, 0, 0, 128, 128, 128, 128, 128, 128, 128, 128]);
         let sendTimer = null;
-        const SEND_INTERVAL_MS = 50; // 50ms 주기 전송 (초당 20회)
+        const SEND_INTERVAL_MS = 50; // 50ms (초당 20회 연속 전송)
 
         async function connectBLE() {
             try {
@@ -75,12 +105,10 @@
                 const service = await server.getPrimaryService(SERVICE_UUID);
                 gattCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
-                statusDiv.innerText = "WROVER 연결됨";
+                statusDiv.innerText = "DY PumpController 연결됨";
                 statusDiv.className = "status connected";
 
                 bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
-
-                // 연결 즉시 주기적 패킷 루프 실행
                 startPeriodicSend();
             } catch (error) {
                 console.error(error);
@@ -96,7 +124,6 @@
             stopPeriodicSend();
         }
 
-        // 50ms마다 주기적으로 ESP32에 패킷 전송
         function startPeriodicSend() {
             if (sendTimer) clearInterval(sendTimer);
             sendTimer = setInterval(async () => {
@@ -104,7 +131,7 @@
                 try {
                     await gattCharacteristic.writeValueWithoutResponse(packet);
                 } catch (err) {
-                    console.error("전송 에러:", err);
+                    console.error("BLE 전송 오류:", err);
                 }
             }, SEND_INTERVAL_MS);
         }
@@ -116,42 +143,43 @@
             }
         }
 
-        // 조이스틱 버튼 누름 시작 (50ms마다 변경된 값이 지속 전송됨)
-        function startPress(lx, ly) {
-            packet[4] = ly + 128; // Left Y
-            packet[5] = lx + 128; // Left X
-            
-            // 방향 비트마스크 연산 (TPDO1)
-            packet[0] = 0;
-            packet[1] = 0;
-            if (ly < 0) packet[1] |= 0x02;
-            if (ly > 0) packet[0] |= 0x02;
-            if (lx < 0) packet[1] |= 0x01;
-            if (lx > 0) packet[0] |= 0x01;
+        // 조이스틱 버튼 작동 제어
+        function pressJoy(action) {
+            // 초기화
+            resetNeutral();
+
+            switch (action) {
+                // [우측 조이스틱]
+                case 'SWING_L':  packet[5] = 1;   break; // A4/L4 (좌)
+                case 'SWING_R':  packet[5] = 255; break; // A4/H4 (우)
+                case 'B1_UP':    packet[4] = 1;   break; // A3/H3 (상)
+                case 'B1_DOWN':  packet[4] = 255; break; // A3/L3 (하)
+                case 'B2_CCW':   packet[6] = 1;   break; // A6/L6 (노브 반시계)
+                case 'B2_CW':    packet[6] = 255; break; // A6/H6 (노브 시계)
+
+                // [좌측 조이스틱]
+                case 'B3_CCW':   packet[9] = 1;   break; // A5/L5 (노브 반시계)
+                case 'B3_CW':    packet[9] = 255; break; // A5/H5 (노브 시계)
+                case 'B4_LEFT':  packet[7] = 1;   break; // A2/L2 (좌)
+                case 'B4_RIGHT': packet[7] = 255; break; // A2/H2 (우)
+                case 'B5_UP':    packet[8] = 1;   break; // A1/H1 (상)
+                case 'B5_DOWN':  packet[8] = 255; break; // A1/L1 (하)
+            }
         }
 
-        // 버튼에서 손을 떼었을 때 중립 상태 복귀
+        // 손을 떼었을 때 중립 상태(128 / 0x80) 복귀
         function stopPress() {
-            packet[0] = 0;
-            packet[1] = 0;
-            packet[4] = 128; // Y 중립 (80)
-            packet[5] = 128; // X 중립 (80)
+            resetNeutral();
         }
 
         function resetNeutral() {
-            packet = new Uint8Array([0, 0, 0, 0, 128, 128, 128, 128, 128, 128, 128, 128]);
-        }
-
-        function toggleButton(type) {
-            if (type === 'CROSS') packet[2] ^= (1 << 5);
-            if (type === 'SQUARE') packet[3] ^= (1 << 5);
-        }
-
-        function sendPulse(type) {
-            if (type === 'TRIANGLE') {
-                packet[2] |= (1 << 3);
-                setTimeout(() => { packet[2] &= ~(1 << 3); }, 200);
+            for (let i = 4; i < 12; i++) {
+                packet[i] = 128; // 0x80
             }
+            packet[0] = 0;
+            packet[1] = 0;
+            packet[2] = 0;
+            packet[3] = 0;
         }
     </script>
 </body>
