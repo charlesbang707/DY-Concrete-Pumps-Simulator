@@ -12,7 +12,7 @@
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
-            touch-action: none; /* 전체화면 고정 및 스크롤 완전 방지 */
+            touch-action: none;
         }
 
         html, body {
@@ -28,66 +28,68 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
+        /* 아이폰 여백(Safe Area) 고려 전체 화면 컨테이너 */
         .app-container {
             display: flex;
             flex-direction: column;
             width: 100%;
             height: 100%;
-            padding: 8px 12px;
+            padding: calc(4px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
             box-sizing: border-box;
-            justify-content: space-between;
+            gap: 6px;
         }
 
-        /* 상단 헤더 */
+        /* 1. 헤더 바 */
         .header-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 36px;
+            height: 32px;
             background: #1e1e22;
-            border-radius: 8px;
-            padding: 0 16px;
+            border-radius: 6px;
+            padding: 0 12px;
+            flex-shrink: 0;
         }
 
-        .status-text { font-weight: bold; font-size: 13px; color: #ff453a; }
+        .status-text { font-weight: bold; font-size: 12px; color: #ff453a; }
         .status-text.connected { color: #30d158; }
 
         .btn-connect {
             background-color: #0a84ff;
             color: white;
             border: none;
-            padding: 5px 12px;
-            border-radius: 6px;
+            padding: 4px 10px;
+            border-radius: 5px;
             font-weight: bold;
-            font-size: 12px;
+            font-size: 11px;
             cursor: pointer;
         }
 
-        /* 메인 조이스틱 섹션 */
+        /* 2. 조이스틱 영역 */
         .joystick-section {
             display: flex;
-            gap: 12px;
-            flex: 1.2;
-            margin: 6px 0;
+            gap: 8px;
+            flex: 1.1;
+            min-height: 0;
         }
 
         .joystick-card {
             flex: 1;
             background: #1c1c20;
             border: 1px solid #2c2c32;
-            border-radius: 12px;
+            border-radius: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: space-around;
-            padding: 6px;
+            justify-content: space-evenly;
+            padding: 4px;
         }
 
-        .card-title { font-size: 12px; color: #0a84ff; font-weight: bold; }
+        .card-title { font-size: 11px; color: #0a84ff; font-weight: bold; }
 
         .stick-area {
-            width: 110px;
-            height: 110px;
+            width: 90px;
+            height: 90px;
             border-radius: 50%;
             background: #282830;
             border: 2px solid #3a3a45;
@@ -98,93 +100,105 @@
         }
 
         .stick-handle {
-            width: 42px;
-            height: 42px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             background: radial-gradient(circle, #e5e5ea 0%, #8e8e93 100%);
             border: 2px solid #ffffff;
             position: absolute;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
-            left: 34px;
-            top: 34px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.5);
+            left: 25px;
+            top: 25px;
         }
 
         .slider-box {
-            width: 90%;
+            width: 92%;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
 
-        .slider-label { font-size: 11px; color: #ffd60a; margin-bottom: 2px; }
-        .custom-slider { width: 100%; accent-color: #ffd60a; }
+        .slider-label { font-size: 10px; color: #ffd60a; margin-bottom: 2px; }
+        .custom-slider { width: 100%; height: 16px; accent-color: #ffd60a; }
 
-        /* 하단 제어 패널 */
+        /* 3. 하단 제어 패널 */
         .control-panel {
-            flex: 1;
+            flex: 0.9;
+            min-height: 0;
             background: #1c1c20;
             border: 1px solid #2c2c32;
-            border-radius: 12px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: space-around;
-            padding: 4px;
+            padding: 4px 6px;
         }
 
         .group-box {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
         }
 
-        .group-title { font-size: 10px; color: #8e8e93; }
+        .group-title { font-size: 9px; color: #8e8e93; font-weight: bold; }
 
         .btn-ctrl {
-            width: 48px;
-            height: 30px;
+            width: 44px;
+            height: 28px;
             background: #2c2c32;
-            color: #fff;
+            color: #ccc;
             border: 1px solid #44444e;
-            border-radius: 6px;
+            border-radius: 5px;
             font-size: 10px;
             font-weight: bold;
         }
-        .btn-ctrl:active, .btn-ctrl.active { background: #0a84ff; border-color: #0a84ff; }
+
+        /* 버튼 토글 활성화 하이라이트 */
+        .btn-ctrl.active {
+            background: #0a84ff;
+            color: #ffffff;
+            border-color: #64d2ff;
+            box-shadow: 0 0 8px rgba(10, 132, 255, 0.6);
+        }
 
         .btn-gss {
-            width: 60px;
-            height: 60px;
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
             background: radial-gradient(circle, #ff453a 0%, #ff3b30 100%);
             color: white;
             font-weight: bold;
-            font-size: 14px;
-            border: 3px solid #ffffff;
-            box-shadow: 0 0 12px rgba(255, 69, 58, 0.6);
+            font-size: 13px;
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 10px rgba(255, 69, 58, 0.6);
         }
-        .btn-gss:active { transform: scale(0.95); }
+        .btn-gss.active { transform: scale(0.92); box-shadow: 0 0 18px rgba(255, 69, 58, 1); }
 
+        /* 노브 상호작용 스타일 */
         .knob-container {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            border: 3px solid #ffd60a;
+            border: 2px solid #ffd60a;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
+            background: #282830;
+            cursor: pointer;
         }
         .knob-pointer {
-            width: 3px;
-            height: 16px;
+            width: 2px;
+            height: 14px;
             background: #ffd60a;
             position: absolute;
             top: 2px;
-            border-radius: 2px;
+            border-radius: 1px;
             transform-origin: bottom center;
+            transform: rotate(-135deg);
         }
-        .knob-val { font-size: 10px; color: #ffd60a; font-weight: bold; }
+        .knob-val { font-size: 9px; color: #ffd60a; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -221,46 +235,53 @@
         </div>
     </div>
 
-    <!-- 하단 제어 패널 -->
     <div class="control-panel">
+        <!-- BOOM/OUT 선택 (토글 모드) -->
         <div class="group-box">
             <div class="group-title">BOOM/OUT</div>
-            <button class="btn-ctrl" id="btnBoom">BOOM</button>
+            <button class="btn-ctrl active" id="btnBoom">BOOM</button>
             <button class="btn-ctrl" id="btnOut">OUT</button>
         </div>
 
+        <!-- RPM 조절 -->
         <div class="group-box">
             <div class="group-title">RPM</div>
             <button class="btn-ctrl" id="btnRpmPlus">+ RPM</button>
             <button class="btn-ctrl" id="btnRpmMinus">- RPM</button>
         </div>
 
+        <!-- 토출량 노브 (드래그 조절) -->
         <div class="group-box">
             <div class="group-title">토출량(A8)</div>
             <div class="knob-container" id="knobA8"><div class="knob-pointer" id="ptrA8"></div></div>
             <div class="knob-val" id="valA8">128</div>
         </div>
 
+        <!-- 비상정지 -->
         <button class="btn-gss" id="btnGSS">GSS</button>
 
+        <!-- HORN / JUMP -->
         <div class="group-box">
             <div class="group-title">HORN/JUMP</div>
             <button class="btn-ctrl" id="btnHorn">HORN</button>
             <button class="btn-ctrl" id="btnJump">JUMP</button>
         </div>
 
+        <!-- PUMP 선택 (토글 모드) -->
         <div class="group-box">
             <div class="group-title">PUMP</div>
             <button class="btn-ctrl" id="btnPumpFwd">정전</button>
             <button class="btn-ctrl" id="btnPumpRev">역전</button>
         </div>
 
+        <!-- BOOM SPD 노브 (드래그 조절) -->
         <div class="group-box">
             <div class="group-title">BOOM SPD</div>
             <div class="knob-container" id="knobSpd"><div class="knob-pointer" id="ptrSpd"></div></div>
             <div class="knob-val" id="valSpd">128</div>
         </div>
 
+        <!-- END HOSE -->
         <div class="group-box">
             <div class="group-title">END HOSE</div>
             <button class="btn-ctrl" id="btnHoseOpen">OPEN</button>
@@ -276,9 +297,9 @@
     let bleDevice = null;
     let gattCharacteristic = null;
 
-    // 12바이트 TPDO 데이터 패킷
+    // 12바이트 TPDO 데이터 구조 초기화
     let packet = new Uint8Array(12);
-    packet.fill(128, 4, 12); // 아날로그 축 기본값 128 (중립)
+    packet.fill(128, 4, 12); // 아날로그 축 128 중립
     packet[0] = 0; packet[1] = 0; packet[2] = 0; packet[3] = 0;
 
     async function connectBLE() {
@@ -317,11 +338,11 @@
         }
     }
 
-    // --- 조이스틱 터치 드래그 연산 ---
+    // --- 1. 조이스틱 드래그 제어 ---
     function setupJoystick(areaId, stickId, axisXIndex, axisYIndex) {
         const area = document.getElementById(areaId);
         const stick = document.getElementById(stickId);
-        const maxRadius = 35;
+        const maxRadius = 27;
 
         function updateStick(clientX, clientY) {
             const rect = area.getBoundingClientRect();
@@ -338,8 +359,6 @@
             }
 
             stick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-
-            // 0 ~ 255 정규화
             packet[axisXIndex] = Math.round(((deltaX / maxRadius) + 1) * 127.5);
             packet[axisYIndex] = Math.round(((deltaY / maxRadius) + 1) * 127.5);
             sendPacket();
@@ -360,7 +379,7 @@
     setupJoystick('areaLeft', 'stickLeft', 5, 4);   // 4붐/5붐 (Left Stick)
     setupJoystick('areaRight', 'stickRight', 7, 6); // 스윙/1붐 (Right Stick)
 
-    // --- 슬라이더 2붐 / 3붐 자동 중립 복귀 (Auto Return) ---
+    // --- 2. 슬라이더 자동 중립 복귀 ---
     function setupAutoReturnSlider(sliderId, labelId, labelPrefix, packetIndex) {
         const slider = document.getElementById(sliderId);
         const label = document.getElementById(labelId);
@@ -384,20 +403,52 @@
         slider.addEventListener('mouseup', resetSlider);
     }
 
-    setupAutoReturnSlider('sliderA5', 'lblA5', '3붐 회전 (A5)', 8); // L2 위치 매핑
-    setupAutoReturnSlider('sliderA6', 'lblA6', '2붐 회전 (A6)', 9); // R2 위치 매핑
+    setupAutoReturnSlider('sliderA5', 'lblA5', '3붐 회전 (A5)', 8);
+    setupAutoReturnSlider('sliderA6', 'lblA6', '2붐 회전 (A6)', 9);
 
-    // --- 버튼 이벤트 핸들러 ---
-    function bindButton(btnId, bitByte, bitShift) {
-        const btn = document.getElementById(btnId);
+    // --- 3. 노브 (토출량 & BOOM SPD) 상호작용 드래그 제어 ---
+    function setupKnob(knobId, ptrId, valId, packetIndex) {
+        const knob = document.getElementById(knobId);
+        const ptr = document.getElementById(ptrId);
+        const valTxt = document.getElementById(valId);
         
+        let startY = 0;
+        let startVal = 128;
+
+        function onTouchStart(e) {
+            startY = e.touches[0].clientY;
+            startVal = packet[packetIndex];
+        }
+
+        function onTouchMove(e) {
+            let deltaY = startY - e.touches[0].clientY; // 위로 올리면 증가
+            let newVal = Math.min(255, Math.max(0, startVal + Math.round(deltaY * 1.5)));
+            
+            packet[packetIndex] = newVal;
+            valTxt.innerText = newVal;
+
+            // -135도 ~ +135도 각도 변환
+            let deg = -135 + (newVal / 255) * 270;
+            ptr.style.transform = `rotate(${deg}deg)`;
+            sendPacket();
+        }
+
+        knob.addEventListener('touchstart', onTouchStart);
+        knob.addEventListener('touchmove', onTouchMove);
+    }
+
+    setupKnob('knobA8', 'ptrA8', 'valA8', 10);  // 토출량 (A8)
+    setupKnob('knobSpd', 'ptrSpd', 'valSpd', 11); // 붐 속도 (BOOM SPD)
+
+    // --- 4. 버튼 이벤트 처리 (Momentary & Toggle) ---
+    function bindMomentaryBtn(btnId, bitByte, bitShift) {
+        const btn = document.getElementById(btnId);
         btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             btn.classList.add('active');
             packet[bitByte] |= (1 << bitShift);
             sendPacket();
         });
-
         btn.addEventListener('touchend', (e) => {
             e.preventDefault();
             btn.classList.remove('active');
@@ -406,11 +457,62 @@
         });
     }
 
-    bindButton('btnGSS', 2, 5);      // CROSS (GSS Emergency)
-    bindButton('btnPumpFwd', 2, 1);  // 정전
-    bindButton('btnPumpRev', 2, 2);  // 역전
-    bindButton('btnHorn', 3, 1);     // HORN
-    bindButton('btnJump', 3, 5);     // JUMP
+    // BOOM/OUT 선택 토글 스위치 (Byte 0)
+    const btnBoom = document.getElementById('btnBoom');
+    const btnOut = document.getElementById('btnOut');
+
+    btnBoom.addEventListener('click', () => {
+        btnBoom.classList.add('active');
+        btnOut.classList.remove('active');
+        packet[0] &= ~(1 << 0); // BOOM 모드
+        sendPacket();
+    });
+
+    btnOut.addEventListener('click', () => {
+        btnOut.classList.add('active');
+        btnBoom.classList.remove('active');
+        packet[0] |= (1 << 0);  // OUT 모드
+        sendPacket();
+    });
+
+    // PUMP 정전/역전 선택 토글 스위치 (Byte 2)
+    const btnPumpFwd = document.getElementById('btnPumpFwd');
+    const btnPumpRev = document.getElementById('btnPumpRev');
+
+    btnPumpFwd.addEventListener('click', () => {
+        if (btnPumpFwd.classList.contains('active')) {
+            btnPumpFwd.classList.remove('active');
+            packet[2] &= ~(1 << 1); // 펌프 OFF
+        } else {
+            btnPumpFwd.classList.add('active');
+            btnPumpRev.classList.remove('active');
+            packet[2] |= (1 << 1);  // 정전 ON
+            packet[2] &= ~(1 << 2); // 역전 OFF
+        }
+        sendPacket();
+    });
+
+    btnPumpRev.addEventListener('click', () => {
+        if (btnPumpRev.classList.contains('active')) {
+            btnPumpRev.classList.remove('active');
+            packet[2] &= ~(1 << 2); // 펌프 OFF
+        } else {
+            btnPumpRev.classList.add('active');
+            btnPumpFwd.classList.remove('active');
+            packet[2] |= (1 << 2);  // 역전 ON
+            packet[2] &= ~(1 << 1); // 정전 OFF
+        }
+        sendPacket();
+    });
+
+    // 기타 순간작동(Momentary) 버튼
+    bindMomentaryBtn('btnGSS', 2, 5);       // GSS 비상정지
+    bindMomentaryBtn('btnRpmPlus', 3, 3);   // RPM +
+    bindMomentaryBtn('btnRpmMinus', 3, 4);  // RPM -
+    bindMomentaryBtn('btnHorn', 3, 1);      // HORN
+    bindMomentaryBtn('btnJump', 3, 5);      // JUMP
+    bindMomentaryBtn('btnHoseOpen', 1, 1);  // END HOSE OPEN
+    bindMomentaryBtn('btnHoseClose', 1, 2); // END HOSE CLOSE
 </script>
 
 </body>
