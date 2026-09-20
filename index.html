@@ -61,7 +61,7 @@
         let outputSpeed = 128;
         let boomSpeed = 128;
 
-        async function connectBLE() {
+        /*async function connectBLE() {
             try {
                 const statusDiv = document.getElementById("status");
                 statusDiv.innerText = "기기 검색 중...";
@@ -84,7 +84,35 @@
                 alert("연결 실패: " + error);
             }
         }
-
+        */
+        async function connectBLE() {
+            try {
+                const statusDiv = document.getElementById("status");
+                statusDiv.innerText = "기기 검색 중...";
+        
+                // 주변의 모든 BLE 장치를 스캔하도록 설정
+                bleDevice = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [SERVICE_UUID]
+                });
+        
+                statusDiv.innerText = "연결 중...";
+        
+                const server = await bleDevice.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                gattCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+        
+                statusDiv.innerText = "WROVER 연결됨";
+                statusDiv.className = "status connected";
+        
+                bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+            } catch (error) {
+                console.error(error);
+                alert("연결 실패 또는 취소됨: " + error);
+                document.getElementById("status").innerText = "연결 실패";
+            }
+        }
+        
         function onDisconnected() {
             const statusDiv = document.getElementById("status");
             statusDiv.innerText = "연결 끊김";
