@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>ESP32 WROVER BLE Controller</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #1c1c1e; color: #fff; text-align: center; margin: 0; padding: 20px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #1c1c1e; color: #fff; text-align: center; margin: 0; padding: 20px; user-select: none; }
         .status { padding: 12px; margin-bottom: 20px; border-radius: 8px; background: #2c2c2e; font-weight: bold; }
         .connected { color: #30d158; }
         .disconnected { color: #ff453a; }
         .btn-group { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
-        button { background: #0a84ff; color: white; border: none; padding: 15px 25px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        button { background: #0a84ff; color: white; border: none; padding: 15px 25px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; touch-action: manipulation; }
         button:active { background: #0056b3; }
         button.red { background: #ff453a; }
         button.green { background: #30d158; }
@@ -27,138 +27,131 @@
 
     <hr style="border-color: #38383a; margin: 25px 0;">
 
-    <!-- 주요 동작 버튼 -->
+    <!-- 주요 동작 버튼 (눌렀을 때 토글/전송) -->
     <div class="btn-group">
-        <button class="green" onclick="sendButton('CROSS')">PUMP START</button>
-        <button onclick="sendButton('TRIANGLE')">S-VALVE</button>
-        <button class="red" onclick="sendButton('SQUARE')">EMERGENCY</button>
+        <button class="green" onclick="toggleButton('CROSS')">PUMP START</button>
+        <button onclick="sendPulse('TRIANGLE')">S-VALVE</button>
+        <button class="red" onclick="toggleButton('SQUARE')">EMERGENCY</button>
     </div>
 
-    <!-- 붐대 제어 패널 (조이스틱 대용) -->
+    <!-- 붐대 제어 패널 (누르고 있는 동안 연속 신호 송신) -->
     <h3>Boom Control</h3>
     <div class="joystick-panel">
         <div></div>
-        <button class="joy-btn" onclick="sendJoystick(0, -127)">UP</button>
+        <button class="joy-btn" ontouchstart="startPress(0, -127)" ontouchend="stopPress()" onmousedown="startPress(0, -127)" onmouseup="stopPress()">UP</button>
         <div></div>
-        <button class="joy-btn" onclick="sendJoystick(-127, 0)">LEFT</button>
-        <button class="joy-btn red" onclick="sendJoystick(0, 0)">STOP</button>
-        <button class="joy-btn" onclick="sendJoystick(127, 0)">RIGHT</button>
+        <button class="joy-btn" ontouchstart="startPress(-127, 0)" ontouchend="stopPress()" onmousedown="startPress(-127, 0)" onmouseup="stopPress()">LEFT</button>
+        <button class="joy-btn red" onclick="resetNeutral()">STOP</button>
+        <button class="joy-btn" ontouchstart="startPress(127, 0)" ontouchend="stopPress()" onmousedown="startPress(127, 0)" onmouseup="stopPress()">RIGHT</button>
         <div></div>
-        <button class="joy-btn" onclick="sendJoystick(0, 127)">DOWN</button>
+        <button class="joy-btn" ontouchstart="startPress(0, 127)" ontouchend="stopPress()" onmousedown="startPress(0, 127)" onmouseup="stopPress()">DOWN</button>
         <div></div>
     </div>
 
     <script>
-        // ESP32 코드와 동일한 UUID (소문자 변환)
         const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
         const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
 
         let bleDevice = null;
         let gattCharacteristic = null;
 
-        // 12바이트 패킷 버퍼 (TPDO 구조)
-        let packet = new Uint8Array(12);
-        let outputSpeed = 128;
-        let boomSpeed = 128;
+        // TPDO 12바이트 패킷
+        let packet = new Uint8Array([0, 0, 0, 0, 128, 128, 128, 128, 128, 128, 128, 128]);
+        let sendTimer = null;
+        const SEND_INTERVAL_MS = 50; // 50ms 주기 전송 (초당 20회)
 
-        /*async function connectBLE() {
-            try {
-                const statusDiv = document.getElementById("status");
-                statusDiv.innerText = "기기 검색 중...";
-
-                bleDevice = await navigator.bluetooth.requestDevice({
-                    filters: [{ name: 'WROVER-PumpController' }],
-                    optionalServices: [SERVICE_UUID]
-                });
-
-                const server = await bleDevice.gatt.connect();
-                const service = await server.getPrimaryService(SERVICE_UUID);
-                gattCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-
-                statusDiv.innerText = "WROVER 연결됨";
-                statusDiv.className = "status connected";
-
-                bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
-            } catch (error) {
-                console.error(error);
-                alert("연결 실패: " + error);
-            }
-        }
-        */
         async function connectBLE() {
             try {
                 const statusDiv = document.getElementById("status");
                 statusDiv.innerText = "기기 검색 중...";
-        
-                // 주변의 모든 BLE 장치를 스캔하도록 설정
+
                 bleDevice = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
                     optionalServices: [SERVICE_UUID]
                 });
-        
+
                 statusDiv.innerText = "연결 중...";
-        
                 const server = await bleDevice.gatt.connect();
                 const service = await server.getPrimaryService(SERVICE_UUID);
                 gattCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-        
+
                 statusDiv.innerText = "WROVER 연결됨";
                 statusDiv.className = "status connected";
-        
+
                 bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+                // 연결 즉시 주기적 패킷 루프 실행
+                startPeriodicSend();
             } catch (error) {
                 console.error(error);
-                alert("연결 실패 또는 취소됨: " + error);
+                alert("연결 실패: " + error);
                 document.getElementById("status").innerText = "연결 실패";
             }
         }
-        
+
         function onDisconnected() {
             const statusDiv = document.getElementById("status");
             statusDiv.innerText = "연결 끊김";
             statusDiv.className = "status disconnected";
+            stopPeriodicSend();
         }
 
-        // 12바이트 패킷 생성 및 저지연 전송
-        async function sendPacket() {
-            if (!gattCharacteristic) return;
-            try {
-                // writeValueWithoutResponse로 응답 대기 없이 즉시 전송
-                await gattCharacteristic.writeValueWithoutResponse(packet);
-            } catch (err) {
-                console.error("전송 오류:", err);
+        // 50ms마다 주기적으로 ESP32에 패킷 전송
+        function startPeriodicSend() {
+            if (sendTimer) clearInterval(sendTimer);
+            sendTimer = setInterval(async () => {
+                if (!gattCharacteristic) return;
+                try {
+                    await gattCharacteristic.writeValueWithoutResponse(packet);
+                } catch (err) {
+                    console.error("전송 에러:", err);
+                }
+            }, SEND_INTERVAL_MS);
+        }
+
+        function stopPeriodicSend() {
+            if (sendTimer) {
+                clearInterval(sendTimer);
+                sendTimer = null;
             }
         }
 
-        function sendJoystick(lx, ly) {
-            // TPDO2 조이스틱 축 값 변환 (-128~127 -> 0~255)
-            packet[4] = ly + 128; // Left Stick Y
-            packet[5] = lx + 128; // Left Stick X
-            packet[6] = 128;      // Right Stick Y
-            packet[7] = 128;      // Right Stick X
-            packet[8] = 128;      // L2/R2 neutral
-            packet[9] = 128;
-            packet[10] = outputSpeed;
-            packet[11] = boomSpeed;
-
-            // 방향 비트마스크 (TPDO1)
+        // 조이스틱 버튼 누름 시작 (50ms마다 변경된 값이 지속 전송됨)
+        function startPress(lx, ly) {
+            packet[4] = ly + 128; // Left Y
+            packet[5] = lx + 128; // Left X
+            
+            // 방향 비트마스크 연산 (TPDO1)
             packet[0] = 0;
             packet[1] = 0;
             if (ly < 0) packet[1] |= 0x02;
             if (ly > 0) packet[0] |= 0x02;
             if (lx < 0) packet[1] |= 0x01;
             if (lx > 0) packet[0] |= 0x01;
-
-            sendPacket();
         }
 
-        function sendButton(type) {
-            // TPDO1 비트 연산
-            if (type === 'CROSS') packet[2] ^= (1 << 5);
-            if (type === 'TRIANGLE') packet[2] ^= (1 << 3);
-            if (type === 'SQUARE') packet[3] ^= (1 << 5);
+        // 버튼에서 손을 떼었을 때 중립 상태 복귀
+        function stopPress() {
+            packet[0] = 0;
+            packet[1] = 0;
+            packet[4] = 128; // Y 중립 (80)
+            packet[5] = 128; // X 중립 (80)
+        }
 
-            sendPacket();
+        function resetNeutral() {
+            packet = new Uint8Array([0, 0, 0, 0, 128, 128, 128, 128, 128, 128, 128, 128]);
+        }
+
+        function toggleButton(type) {
+            if (type === 'CROSS') packet[2] ^= (1 << 5);
+            if (type === 'SQUARE') packet[3] ^= (1 << 5);
+        }
+
+        function sendPulse(type) {
+            if (type === 'TRIANGLE') {
+                packet[2] |= (1 << 3);
+                setTimeout(() => { packet[2] &= ~(1 << 3); }, 200);
+            }
         }
     </script>
 </body>
