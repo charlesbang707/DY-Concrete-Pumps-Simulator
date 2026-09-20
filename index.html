@@ -20,7 +20,6 @@
             overflow: hidden;
         }
 
-        /* 상단 헤더 */
         .header-bar {
             display: flex;
             justify-content: space-between;
@@ -48,9 +47,9 @@
             border-radius: 6px;
             font-size: 12px;
             font-weight: bold;
+            cursor: pointer;
         }
 
-        /* 메인 조이스틱 영역 */
         .main-controls {
             display: flex;
             justify-content: space-between;
@@ -103,7 +102,6 @@
         .slider-label { font-size: 10px; color: #ffd60a; font-weight: bold; }
         input[type=range] { width: 100%; height: 20px; accent-color: #ffd60a; margin: 0; }
 
-        /* 하단 제어 패널 (도면 레이아웃 구현) */
         .bottom-panel {
             background: #1c1c1e;
             border: 2px solid #38383a;
@@ -113,7 +111,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: relative;
         }
 
         .panel-group {
@@ -132,7 +129,6 @@
             height: 14px;
         }
 
-        /* 토글/모멘터리 스위치 스타일 */
         .toggle-switch-box {
             display: flex;
             flex-direction: column;
@@ -141,12 +137,12 @@
             border: 1px solid #48484a;
             border-radius: 8px;
             padding: 6px 4px;
-            width: 52px;
+            width: 54px;
             gap: 4px;
         }
 
         .switch-btn {
-            width: 40px;
+            width: 44px;
             height: 28px;
             background: #3a3a3c;
             border: 1px solid #636366;
@@ -160,9 +156,10 @@
             cursor: pointer;
             touch-action: manipulation;
         }
-        .switch-btn:active, .switch-btn.active {
+        .switch-btn.active {
             background: #30d158;
             color: #000;
+            border-color: #30d158;
         }
 
         .disabled-switch {
@@ -170,7 +167,6 @@
             pointer-events: none;
         }
 
-        /* GSS 비상정지 버튼 */
         .gss-container {
             display: flex;
             flex-direction: column;
@@ -196,7 +192,6 @@
             background: #d10000;
         }
 
-        /* 가변 다이얼 노브 스티어링 */
         .knob-container {
             display: flex;
             flex-direction: column;
@@ -231,7 +226,6 @@
             font-weight: bold;
         }
 
-        /* 오른쪽 Motion 버튼 */
         .motion-btn {
             background: #ff9f0a;
             border: 2px solid #fff;
@@ -243,8 +237,9 @@
             writing-mode: vertical-rl;
             text-orientation: upright;
             height: 80px;
+            cursor: pointer;
         }
-        .motion-btn:active { background: #d67a00; }
+        .motion-btn.active { background: #d67a00; color: #fff; }
     </style>
 </head>
 <body>
@@ -279,15 +274,15 @@
         </div>
     </div>
 
-    <!-- 하단 스위치 및 볼륨 제어 패널 (도면 1:1 대응) -->
+    <!-- 하단 제어 패널 -->
     <div class="bottom-panel">
         
-        <!-- D10 / D14 선택 스위치 -->
+        <!-- D10 / D14 선택 스위치 (토글 상태) -->
         <div class="panel-group">
             <div class="group-label">BOOM/OUT</div>
             <div class="toggle-switch-box">
-                <button class="switch-btn" id="btnD10" mousedown="setBit(5, 0x02)" mouseup="clearBit(5, 0x02)">BOOM</button>
-                <button class="switch-btn" id="btnD14" mousedown="setOutrigger(true)" mouseup="setOutrigger(false)">OUT</button>
+                <button class="switch-btn active" id="btnD10" onclick="selectMode('BOOM')">BOOM</button>
+                <button class="switch-btn" id="btnD14" onclick="selectMode('OUT')">OUT</button>
             </div>
         </div>
 
@@ -300,12 +295,12 @@
             </div>
         </div>
 
-        <!-- RPM 제어 (D2 / D3) -->
+        <!-- RPM 제어 (D2 / D3 - 순간작동) -->
         <div class="panel-group">
             <div class="group-label">RPM</div>
             <div class="toggle-switch-box">
-                <button class="switch-btn" id="btnD2" mousedown="setBit(4, 0x02)" mouseup="clearBit(4, 0x02)">+ RPM</button>
-                <button class="switch-btn" id="btnD3" mousedown="setBit(4, 0x04)" mouseup="clearBit(4, 0x04)">- RPM</button>
+                <button class="switch-btn" id="btnD2">+ RPM</button>
+                <button class="switch-btn" id="btnD3">- RPM</button>
             </div>
         </div>
 
@@ -323,21 +318,21 @@
             <div class="gss-btn" id="btnGSS" onclick="triggerGSS()">GSS</div>
         </div>
 
-        <!-- 혼 / 점프 (D6 / D7) -->
+        <!-- 혼 / 점프 (D6 / D7 - 순간작동) -->
         <div class="panel-group">
             <div class="group-label">HORN/JUMP</div>
             <div class="toggle-switch-box">
-                <button class="switch-btn" id="btnD6" mousedown="setBit(4, 0x20)" mouseup="clearBit(4, 0x20)">HORN</button>
+                <button class="switch-btn" id="btnD6">HORN</button>
                 <button class="switch-btn" id="btnD7">JUMP</button>
             </div>
         </div>
 
-        <!-- 펌핑 (D4 / D5) -->
+        <!-- 펌핑 (D4 / D5 - 토클 상태 유지) -->
         <div class="panel-group">
             <div class="group-label">PUMP</div>
             <div class="toggle-switch-box">
-                <button class="switch-btn" id="btnD4" mousedown="setBit(4, 0x08)" mouseup="clearBit(4, 0x08)">정전</button>
-                <button class="switch-btn" id="btnD5" mousedown="setBit(4, 0x10)" mouseup="clearBit(4, 0x10)">역전</button>
+                <button class="switch-btn" id="btnD4" onclick="togglePump('FWD')">정전</button>
+                <button class="switch-btn" id="btnD5" onclick="togglePump('REV')">역전</button>
             </div>
         </div>
 
@@ -350,17 +345,17 @@
             <div class="knob-val" id="valA9">128</div>
         </div>
 
-        <!-- End Hose Open / Close (D15 / D16) -->
+        <!-- End Hose Open / Close (D15 / D16 - 순간작동) -->
         <div class="panel-group">
             <div class="group-label">END HOSE</div>
             <div class="toggle-switch-box">
-                <button class="switch-btn" id="btnD15" mousedown="setBit(5, 0x40)" mouseup="clearBit(5, 0x40)">OPEN</button>
-                <button class="switch-btn" id="btnD16" mousedown="setBit(5, 0x80)" mouseup="clearBit(5, 0x80)">CLOSE</button>
+                <button class="switch-btn" id="btnD15">OPEN</button>
+                <button class="switch-btn" id="btnD16">CLOSE</button>
             </div>
         </div>
 
-        <!-- Motion D8 -->
-        <button class="motion-btn" id="btnD8" mousedown="setBit(4, 0x80)" mouseup="clearBit(4, 0x80)">MOTION</button>
+        <!-- Motion D8 (순간작동) -->
+        <button class="motion-btn" id="btnD8">MOTION</button>
 
     </div>
 
@@ -371,9 +366,12 @@
         let bleDevice = null;
         let gattCharacteristic = null;
 
-        // Byte1 ~ Byte12 BLE 패킷 배열
-        let packet = new Uint8Array([0, 0, 0, 0, 0, 0, 128, 128, 128, 128, 128, 128]);
+        // Byte1 ~ Byte12 BLE 데이터 패킷 배열 초기화
+        let packet = new Uint8Array([0, 0, 0, 0, 0x02, 128, 128, 128, 128, 128, 128, 128]);
         let sendTimer = null;
+
+        let currentMode = 'BOOM'; // BOOM or OUT
+        let currentPump = 'OFF';  // FWD, REV, or OFF
 
         async function connectBLE() {
             try {
@@ -420,65 +418,108 @@
             }, 50);
         }
 
-        /* 비트 제어 헬퍼 함수 */
-        function setBit(byteIdx, bitMask) {
-            packet[byteIdx - 1] |= bitMask;
-        }
+        /* 1. Boom / Outrigger 토글 선택 함수 */
+        function selectMode(mode) {
+            currentMode = mode;
+            const btnD10 = document.getElementById('btnD10');
+            const btnD14 = document.getElementById('btnD14');
 
-        function clearBit(byteIdx, bitMask) {
-            packet[byteIdx - 1] &= ~bitMask;
-        }
-
-        function setOutrigger(active) {
-            if (active) {
-                packet[4] |= 0x20; // Byte5 Outrigger 비트
-                // Outrigger 활성화 시 Byte 7~12 채널 0x7F 기본값 설정
-                for (let i = 6; i < 12; i++) packet[i] = 0x7F;
+            if (mode === 'BOOM') {
+                btnD10.classList.add('active');
+                btnD14.classList.remove('active');
+                packet[4] = (packet[4] & ~0x20) | 0x02; // Byte 5: Boom(0x02) ON, Outrigger OFF
             } else {
-                packet[4] &= ~0x20;
+                btnD14.classList.add('active');
+                btnD10.classList.remove('active');
+                packet[4] = (packet[4] & ~0x02) | 0x20; // Byte 5: Outrigger(0x20) ON, Boom OFF
+                
+                // Outrigger 모드 시 Byte 7~12 채널 0x7F(127) 고정 전송
+                for (let i = 6; i < 12; i++) packet[i] = 127;
             }
         }
 
-        function triggerGSS() {
-            alert("비상정지(GSS)가 작동되었습니다.");
-            packet.fill(0);
-            packet[6] = 128; packet[7] = 128; packet[8] = 128;
-            packet[9] = 128; packet[10] = 128; packet[11] = 128;
+        /* 2. Pump 정전 / 역전 토글 선택 함수 */
+        function togglePump(type) {
+            const btnD4 = document.getElementById('btnD4');
+            const btnD5 = document.getElementById('btnD5');
+
+            if (type === 'FWD') {
+                if (currentPump === 'FWD') {
+                    currentPump = 'OFF';
+                    btnD4.classList.remove('active');
+                    packet[3] &= ~0x08; // Byte 4: 정전 OFF
+                } else {
+                    currentPump = 'FWD';
+                    btnD4.classList.add('active');
+                    btnD5.classList.remove('active');
+                    packet[3] = (packet[3] & ~0x10) | 0x08; // 정전 ON, 역전 OFF
+                }
+            } else if (type === 'REV') {
+                if (currentPump === 'REV') {
+                    currentPump = 'OFF';
+                    btnD5.classList.remove('active');
+                    packet[3] &= ~0x10; // Byte 4: 역전 OFF
+                } else {
+                    currentPump = 'REV';
+                    btnD5.classList.add('active');
+                    btnD4.classList.remove('active');
+                    packet[3] = (packet[3] & ~0x08) | 0x10; // 역전 ON, 정전 OFF
+                }
+            }
         }
 
-        // 터치/마우스 모멘터리 버튼 이벤터 리스너 설정
-        function bindMomentary(id, onDown, onUp) {
+        /* 3. 순간작동(Push & Hold) 버튼 이벤트 바인딩 */
+        function bindMomentary(id, byteIdx, bitMask) {
             const el = document.getElementById(id);
             if (!el) return;
 
-            const handleDown = (e) => { e.preventDefault(); el.classList.add('active'); onDown(); };
-            const handleUp = (e) => { e.preventDefault(); el.classList.remove('active'); onUp(); };
+            const onDown = (e) => {
+                e.preventDefault();
+                el.classList.add('active');
+                packet[byteIdx - 1] |= bitMask;
+            };
 
-            el.addEventListener('mousedown', handleDown);
-            el.addEventListener('mouseup', handleUp);
-            el.addEventListener('touchstart', handleDown);
-            el.addEventListener('touchend', handleUp);
+            const onUp = (e) => {
+                e.preventDefault();
+                el.classList.remove('active');
+                packet[byteIdx - 1] &= ~bitMask;
+            };
+
+            el.addEventListener('mousedown', onDown);
+            el.addEventListener('mouseup', onUp);
+            el.addEventListener('mouseleave', onUp);
+            el.addEventListener('touchstart', onDown, { passive: false });
+            el.addEventListener('touchend', onUp, { passive: false });
         }
 
-        bindMomentary('btnD10', () => setBit(5, 0x02), () => clearBit(5, 0x02));
-        bindMomentary('btnD14', () => setOutrigger(true), () => setOutrigger(false));
-        bindMomentary('btnD2', () => setBit(4, 0x02), () => clearBit(4, 0x02));
-        bindMomentary('btnD3', () => setBit(4, 0x04), () => clearBit(4, 0x04));
-        bindMomentary('btnD6', () => setBit(4, 0x20), () => clearBit(4, 0x20));
-        bindMomentary('btnD4', () => setBit(4, 0x08), () => clearBit(4, 0x08));
-        bindMomentary('btnD5', () => setBit(4, 0x10), () => clearBit(4, 0x10));
-        bindMomentary('btnD15', () => setBit(5, 0x40), () => clearBit(5, 0x40));
-        bindMomentary('btnD16', () => setBit(5, 0x80), () => clearBit(5, 0x80));
-        bindMomentary('btnD8', () => setBit(4, 0x80), () => clearBit(4, 0x80));
+        bindMomentary('btnD2', 4, 0x02); // RPM+
+        bindMomentary('btnD3', 4, 0x04); // RPM-
+        bindMomentary('btnD6', 4, 0x20); // Horn
+        bindMomentary('btnD15', 5, 0x40); // End Hose Open
+        bindMomentary('btnD16', 5, 0x80); // End Hose Close
+        bindMomentary('btnD8', 4, 0x80);  // Motion
 
-        /* 가변 다이얼 Knob 제어 클래스 */
+        /* 4. GSS 비상정지 */
+        function triggerGSS() {
+            alert("비상정지(GSS)가 작동되었습니다.");
+            packet.fill(0);
+            packet[4] = 0x02; // 기본 Boom 선택 복구
+            for (let i = 5; i < 12; i++) packet[i] = 128; // 아날로그 중앙값
+            
+            // UI 상태 초기화
+            selectMode('BOOM');
+            currentPump = 'OFF';
+            document.getElementById('btnD4').classList.remove('active');
+            document.getElementById('btnD5').classList.remove('active');
+        }
+
+        /* 5. 가변 다이얼 Knob 클래스 */
         class DialKnob {
             constructor(knobId, pointerId, valId, byteIndex) {
                 this.knob = document.getElementById(knobId);
                 this.pointer = document.getElementById(pointerId);
                 this.valDisplay = document.getElementById(valId);
                 this.byteIndex = byteIndex;
-                this.angle = 0; // -135deg ~ 135deg
 
                 this.initEvents();
             }
@@ -497,7 +538,6 @@
 
                     this.pointer.style.transform = `translateX(-50%) rotate(${deg}deg)`;
                     
-                    // -135~135 도각을 128~255 (0x80~0xFF) 범위로 스케일링
                     const norm = (deg + 135) / 270;
                     const val = Math.round(128 + norm * 127);
                     
@@ -511,23 +551,33 @@
                 };
 
                 this.knob.addEventListener('mousedown', () => {
-                    window.addEventListener('mousemove', onMove);
-                    window.addEventListener('mouseup', () => window.removeEventListener('mousemove', onMove), { once: true });
+                    const moveHandler = (e) => onMove(e);
+                    const upHandler = () => {
+                        window.removeEventListener('mousemove', moveHandler);
+                        window.removeEventListener('mouseup', upHandler);
+                    };
+                    window.addEventListener('mousemove', moveHandler);
+                    window.addEventListener('mouseup', upHandler);
                 });
 
                 this.knob.addEventListener('touchstart', (e) => {
                     e.preventDefault();
-                    window.addEventListener('touchmove', onMove);
-                    window.addEventListener('touchend', () => window.removeEventListener('touchmove', onMove), { once: true });
-                });
+                    const moveHandler = (e) => onMove(e);
+                    const upHandler = () => {
+                        window.removeEventListener('touchmove', moveHandler);
+                        window.removeEventListener('touchend', upHandler);
+                    };
+                    window.addEventListener('touchmove', moveHandler, { passive: false });
+                    window.addEventListener('touchend', upHandler);
+                }, { passive: false });
             }
         }
 
         const knobA8 = new DialKnob('knobA8', 'pointerA8', 'valA8', 12); // Byte 12 (토출량)
         const knobA9 = new DialKnob('knobA9', 'pointerA9', 'valA9', 11); // Byte 11 (Boom Speed)
 
-        /* 조이스틱 구현 클래스 */
-        class CorrectedTouchJoystick {
+        /* 6. 터치 조이스틱 클래스 */
+        class TouchJoystick {
             constructor(canvasId, onMove) {
                 this.canvas = document.getElementById(canvasId);
                 this.ctx = this.canvas.getContext('2d');
@@ -638,12 +688,12 @@
             }
         }
 
-        const leftStick = new CorrectedTouchJoystick('canvasLeft', (x, y) => {
+        const leftStick = new TouchJoystick('canvasLeft', (x, y) => {
             packet[7] = x; // 4붐 (Byte 8)
             packet[5] = y; // 5붐 (Byte 6)
         });
 
-        const rightStick = new CorrectedTouchJoystick('canvasRight', (x, y) => {
+        const rightStick = new TouchJoystick('canvasRight', (x, y) => {
             packet[8] = x; // Swing (Byte 9)
             packet[6] = y; // 1붐 (Byte 7)
         });
