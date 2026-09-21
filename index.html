@@ -329,15 +329,13 @@
 
     const encoder = new TextEncoder();
 
-    // 12바이트 TPDO 데이터 구조 (Byte 1 ~ Byte 12 -> packet[0] ~ packet[11])
+    // 12바이트 데이터 구조
     let packet = new Uint8Array(12);
-    packet[0] = 0x00; // Byte 1
-    packet[1] = 0x00; // Byte 2
-    packet[2] = 0x00; // Byte 3
-    packet[3] = 0x02; // Byte 4 -> 기본값을 BOOM 모드(0x02)로 설정
-    
-    // Byte 5 ~ 12 (아날로그 중립 128 = 0x80)
-    packet.fill(128, 4, 12);
+    packet[0] = 0x00;
+    packet[1] = 0x00;
+    packet[2] = 0x00;
+    packet[3] = 0x02; // 기본값 BOOM 모드
+    packet.fill(128, 4, 12); // 아날로그 중립값
 
     async function connectBLE() {
         try {
@@ -371,18 +369,26 @@
 
     function startSendingLoop() {
         if (sendIntervalTimer) clearInterval(sendIntervalTimer);
-        // 40ms 주기 전송
+        
         sendIntervalTimer = setInterval(async () => {
             if (!gattCharacteristic || isSending) return;
             try {
                 isSending = true;
-                // 바이트 배열을 16진수 두 자릿수 표기 및 공백 구분의 문자열로 변환 (예: "00 00 00 02 80 80 ...")
-                const hexString = Array.from(packet)
-                    .map(b => b.toString(16).padStart(2, '0').toUpperCase())
-                    .join(' ');
 
-                const sendData = encoder.encode(hexString);
-                await gattCharacteristic.writeValueWithoutResponse(sendData);
+                // 12바이트 배열을 스페이스로 구분된 ASCII HEX 문자열로 생성
+                // 예시: "00 00 00 02 80 80 80 80 80 80 80 80\n"
+                let asciiStr = "";
+                for (let i = 0; i < packet.length; i++) {
+                    asciiStr += packet[i].toString(16).padStart(2, '0').toUpperCase();
+                    if (i < packet.length - 1) {
+                        asciiStr += " "; // 바이트 간 공백 삽입
+                    }
+                }
+                asciiStr += "\n"; // 줄바꿈 추가 (시리얼 개행 구분용)
+
+                // ASCII 문자열을 바이트 바이트 데이터(Uint8Array)로 인코딩하여 전송
+                const encodedData = encoder.encode(asciiStr);
+                await gattCharacteristic.writeValueWithoutResponse(encodedData);
             } catch (e) {
                 console.error("전송 에러:", e);
             } finally {
@@ -398,7 +404,7 @@
         }
     }
 
-    // --- 좌측 조이스틱 (L3: Byte 5/6) ---
+    // --- 조이스틱 및 컨트롤 레이아웃 바인딩 ---
     function setupLeftJoystick() {
         const area = document.getElementById('areaLeft');
         const stick = document.getElementById('stickLeft');
@@ -423,8 +429,8 @@
             const valX = Math.round((normX + 1) * 127.5);
             const valY = Math.round((normY + 1) * 127.5);
 
-            packet[5] = valX; // Byte 6
-            packet[4] = valY; // Byte 5
+            packet[5] = valX;
+            packet[4] = valY;
 
             if (valY < 80) { packet[0] |= 0x01; packet[1] &= ~0x01; }
             else if (valY > 175) { packet[1] |= 0x01; packet[0] &= ~0x01; }
@@ -448,7 +454,6 @@
         area.addEventListener('touchend', (e) => { e.preventDefault(); resetStick(); });
     }
 
-    // --- 우측 조이스틱 (R3: Byte 7/8) ---
     function setupRightJoystick() {
         const area = document.getElementById('areaRight');
         const stick = document.getElementById('stickRight');
@@ -473,8 +478,8 @@
             const valX = Math.round((normX + 1) * 127.5);
             const valY = Math.round((normY + 1) * 127.5);
 
-            packet[7] = valX; // Byte 8
-            packet[6] = valY; // Byte 7
+            packet[7] = valX;
+            packet[6] = valY;
 
             if (valY > 175) { packet[0] |= 0x04; packet[1] &= ~0x04; }
             else if (valY < 80) { packet[1] |= 0x04; packet[0] &= ~0x04; }
@@ -501,7 +506,6 @@
     setupLeftJoystick();
     setupRightJoystick();
 
-    // --- 슬라이더 (L2: Byte 9, R2: Byte 10) ---
     function setupSlider(sliderId, labelId, title, packetIdx, bitUpShift, bitDownShift) {
         const slider = document.getElementById(sliderId);
         const label = document.getElementById(labelId);
@@ -535,7 +539,6 @@
     setupSlider('sliderA5', 'lblA5', '3붐 제어 (L2)', 8, 4, 4);
     setupSlider('sliderA6', 'lblA6', '2붐 제어 (R2)', 9, 5, 5);
 
-    // --- 토출량 노브 (Byte 12) ---
     const knobA8 = document.getElementById('knobA8');
     const ptrA8 = document.getElementById('ptrA8');
     const valA8 = document.getElementById('valA8');
@@ -557,7 +560,6 @@
         ptrA8.style.transform = `rotate(${-135 + (newVal / 255) * 270}deg)`;
     });
 
-    // --- 순간작동 버튼 바인딩 함수 ---
     function bindMomentary(btnId, packetIdx, bitShift) {
         const btn = document.getElementById(btnId);
         btn.addEventListener('touchstart', (e) => {
@@ -581,7 +583,6 @@
     bindMomentary('btnHoseOpen', 3, 6);
     bindMomentary('btnHoseClose', 3, 7);
 
-    // --- BOOM / OUT 모드 선택 ---
     const btnBoom = document.getElementById('btnBoom');
     const btnOut = document.getElementById('btnOut');
 
@@ -601,7 +602,6 @@
         packet[3] &= ~0x02;
     });
 
-    // --- PUMP 정전/역전 선택 ---
     const btnPumpFwd = document.getElementById('btnPumpFwd');
     const btnPumpRev = document.getElementById('btnPumpRev');
 
