@@ -327,14 +327,16 @@
     let sendIntervalTimer = null;
     let isSending = false;
 
+    const encoder = new TextEncoder();
+
     // 12바이트 TPDO 데이터 구조 (Byte 1 ~ Byte 12 -> packet[0] ~ packet[11])
     let packet = new Uint8Array(12);
-    packet[0] = 0x00; // Byte 1 (TPDO1 Byte 1)
-    packet[1] = 0x00; // Byte 2 (TPDO1 Byte 2)
-    packet[2] = 0x00; // Byte 3 (TPDO1 Byte 3)
-    packet[3] = 0x02; // Byte 4 (TPDO1 Byte 4) -> 기본값을 BOOM 모드(0x02)로 설정
+    packet[0] = 0x00; // Byte 1
+    packet[1] = 0x00; // Byte 2
+    packet[2] = 0x00; // Byte 3
+    packet[3] = 0x02; // Byte 4 -> 기본값을 BOOM 모드(0x02)로 설정
     
-    // Byte 5 ~ 12 (TPDO2 / TPDO3 - 아날로그 중립 128 = 0x80)
+    // Byte 5 ~ 12 (아날로그 중립 128 = 0x80)
     packet.fill(128, 4, 12);
 
     async function connectBLE() {
@@ -374,7 +376,13 @@
             if (!gattCharacteristic || isSending) return;
             try {
                 isSending = true;
-                await gattCharacteristic.writeValueWithoutResponse(packet);
+                // 바이트 배열을 16진수 두 자릿수 표기 및 공백 구분의 문자열로 변환 (예: "00 00 00 02 80 80 ...")
+                const hexString = Array.from(packet)
+                    .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+                    .join(' ');
+
+                const sendData = encoder.encode(hexString);
+                await gattCharacteristic.writeValueWithoutResponse(sendData);
             } catch (e) {
                 console.error("전송 에러:", e);
             } finally {
@@ -390,7 +398,7 @@
         }
     }
 
-    // --- 좌측 조이스틱 (L3: Byte 5/6 - 5붐, 4붐) ---
+    // --- 좌측 조이스틱 (L3: Byte 5/6) ---
     function setupLeftJoystick() {
         const area = document.getElementById('areaLeft');
         const stick = document.getElementById('stickLeft');
@@ -412,18 +420,16 @@
 
             stick.style.transform = `translate(${normX * maxRadius}px, ${normY * maxRadius}px)`;
 
-            const valX = Math.round((normX + 1) * 127.5); // 4붐
-            const valY = Math.round((normY + 1) * 127.5); // 5붐
+            const valX = Math.round((normX + 1) * 127.5);
+            const valY = Math.round((normY + 1) * 127.5);
 
-            packet[5] = valX; // Byte 6 (TPDO2 Byte 6)
-            packet[4] = valY; // Byte 5 (TPDO2 Byte 5)
+            packet[5] = valX; // Byte 6
+            packet[4] = valY; // Byte 5
 
-            // 5붐 상/하 (Byte 1: Bit 0=상승(0x01), Byte 2: Bit 0=하강(0x01))
             if (valY < 80) { packet[0] |= 0x01; packet[1] &= ~0x01; }
             else if (valY > 175) { packet[1] |= 0x01; packet[0] &= ~0x01; }
             else { packet[0] &= ~0x01; packet[1] &= ~0x01; }
 
-            // 4붐 상/하 (Byte 1: Bit 1=상승(0x02), Byte 2: Bit 1=하강(0x02))
             if (valX > 175) { packet[0] |= 0x02; packet[1] &= ~0x02; }
             else if (valX < 80) { packet[1] |= 0x02; packet[0] &= ~0x02; }
             else { packet[0] &= ~0x02; packet[1] &= ~0x02; }
@@ -431,10 +437,10 @@
 
         function resetStick() {
             stick.style.transform = `translate(0px, 0px)`;
-            packet[4] = 128; // Byte 5
-            packet[5] = 128; // Byte 6
-            packet[0] &= ~0x03; // Byte 1 비트 해제
-            packet[1] &= ~0x03; // Byte 2 비트 해제
+            packet[4] = 128;
+            packet[5] = 128;
+            packet[0] &= ~0x03;
+            packet[1] &= ~0x03;
         }
 
         area.addEventListener('touchstart', (e) => { e.preventDefault(); updateStick(e); });
@@ -442,7 +448,7 @@
         area.addEventListener('touchend', (e) => { e.preventDefault(); resetStick(); });
     }
 
-    // --- 우측 조이스틱 (R3: Byte 7/8 - 1붐, 회전) ---
+    // --- 우측 조이스틱 (R3: Byte 7/8) ---
     function setupRightJoystick() {
         const area = document.getElementById('areaRight');
         const stick = document.getElementById('stickRight');
@@ -464,18 +470,16 @@
 
             stick.style.transform = `translate(${normX * maxRadius}px, ${normY * maxRadius}px)`;
 
-            const valX = Math.round((normX + 1) * 127.5); // 회전
-            const valY = Math.round((normY + 1) * 127.5); // 1붐
+            const valX = Math.round((normX + 1) * 127.5);
+            const valY = Math.round((normY + 1) * 127.5);
 
-            packet[7] = valX; // Byte 8 (TPDO2 Byte 8)
-            packet[6] = valY; // Byte 7 (TPDO2 Byte 7)
+            packet[7] = valX; // Byte 8
+            packet[6] = valY; // Byte 7
 
-            // 1붐 상/하 (Byte 1: Bit 2=하강(0x04), Byte 2: Bit 2=상승(0x04))
             if (valY > 175) { packet[0] |= 0x04; packet[1] &= ~0x04; }
             else if (valY < 80) { packet[1] |= 0x04; packet[0] &= ~0x04; }
             else { packet[0] &= ~0x04; packet[1] &= ~0x04; }
 
-            // 좌/우 회전 (Byte 1: Bit 3=우회전(0x08), Byte 2: Bit 3=좌회전(0x08))
             if (valX > 175) { packet[0] |= 0x08; packet[1] &= ~0x08; }
             else if (valX < 80) { packet[1] |= 0x08; packet[0] &= ~0x08; }
             else { packet[0] &= ~0x08; packet[1] &= ~0x08; }
@@ -483,10 +487,10 @@
 
         function resetStick() {
             stick.style.transform = `translate(0px, 0px)`;
-            packet[6] = 128; // Byte 7
-            packet[7] = 128; // Byte 8
-            packet[0] &= ~0x0C; // Byte 1 비트 해제
-            packet[1] &= ~0x0C; // Byte 2 비트 해제
+            packet[6] = 128;
+            packet[7] = 128;
+            packet[0] &= ~0x0C;
+            packet[1] &= ~0x0C;
         }
 
         area.addEventListener('touchstart', (e) => { e.preventDefault(); updateStick(e); });
@@ -507,7 +511,6 @@
             label.innerText = `${title}: ${val}`;
             packet[packetIdx] = val;
 
-            // Byte 1 / Byte 2 비트 제어
             if (val > 175) { packet[0] |= (1 << bitUpShift); packet[1] &= ~(1 << bitUpShift); }
             else if (val < 80) { packet[1] |= (1 << bitDownShift); packet[0] &= ~(1 << bitDownShift); }
             else { 
@@ -529,10 +532,10 @@
         slider.addEventListener('mouseup', reset);
     }
 
-    setupSlider('sliderA5', 'lblA5', '3붐 제어 (L2)', 8, 4, 4); // Byte 9, Byte 1/2 Bit 4
-    setupSlider('sliderA6', 'lblA6', '2붐 제어 (R2)', 9, 5, 5); // Byte 10, Byte 1/2 Bit 5
+    setupSlider('sliderA5', 'lblA5', '3붐 제어 (L2)', 8, 4, 4);
+    setupSlider('sliderA6', 'lblA6', '2붐 제어 (R2)', 9, 5, 5);
 
-    // --- 토출량 노브 (A8 -> Byte 12 = packet[11]) ---
+    // --- 토출량 노브 (Byte 12) ---
     const knobA8 = document.getElementById('knobA8');
     const ptrA8 = document.getElementById('ptrA8');
     const valA8 = document.getElementById('valA8');
@@ -549,7 +552,7 @@
         let deltaY = startY - e.touches[0].clientY;
         let newVal = Math.min(255, Math.max(0, startVal + Math.round(deltaY * 1.5)));
         
-        packet[11] = newVal; // Byte 12
+        packet[11] = newVal;
         valA8.innerText = newVal;
         ptrA8.style.transform = `rotate(${-135 + (newVal / 255) * 270}deg)`;
     });
@@ -569,25 +572,16 @@
         });
     }
 
-    // Byte 4 (packet[3]): Air Cuff (Bit 0 = 0x01)
     bindMomentary('btnStartD1', 3, 0);
-
-    // Byte 3 (packet[2]): Motion Control (Bit 7 = 0x80)
     bindMomentary('btnMotionD8', 2, 7);
-
-    // Byte 3 (packet[2]): 악셀 상승/하강 (Bit 1 = 0x02, Bit 2 = 0x04)
     bindMomentary('btnRpmPlus', 2, 1);
     bindMomentary('btnRpmMinus', 2, 2);
-
-    // Byte 3 (packet[2]): HORN (Bit 5 = 0x20), 행정변환 (Bit 6 = 0x40)
     bindMomentary('btnHorn', 2, 5);
     bindMomentary('btnStroke', 2, 6);
-
-    // Byte 4 (packet[3]): E/H Open (Bit 6 = 0x40), E/H Close (Bit 7 = 0x80)
     bindMomentary('btnHoseOpen', 3, 6);
     bindMomentary('btnHoseClose', 3, 7);
 
-    // --- BOOM / OUT (아우트리거) 모드 선택 (Byte 4 = packet[3]) ---
+    // --- BOOM / OUT 모드 선택 ---
     const btnBoom = document.getElementById('btnBoom');
     const btnOut = document.getElementById('btnOut');
 
@@ -595,19 +589,19 @@
         e.preventDefault();
         btnBoom.classList.add('active');
         btnOut.classList.remove('active');
-        packet[3] |= 0x02;  // Byte 4, Bit 1 (0x02) = 붐
-        packet[3] &= ~0x20; // Byte 4, Bit 5 (0x20) = 아우트리거 해제
+        packet[3] |= 0x02;
+        packet[3] &= ~0x20;
     });
 
     btnOut.addEventListener('touchstart', (e) => {
         e.preventDefault();
         btnOut.classList.add('active');
         btnBoom.classList.remove('active');
-        packet[3] |= 0x20;  // Byte 4, Bit 5 (0x20) = 아우트리거
-        packet[3] &= ~0x02; // Byte 4, Bit 1 (0x02) = 붐 해제
+        packet[3] |= 0x20;
+        packet[3] &= ~0x02;
     });
 
-    // --- PUMP 정전/역전 선택 (Byte 3 = packet[2]) ---
+    // --- PUMP 정전/역전 선택 ---
     const btnPumpFwd = document.getElementById('btnPumpFwd');
     const btnPumpRev = document.getElementById('btnPumpRev');
 
@@ -615,12 +609,12 @@
         e.preventDefault();
         if (btnPumpFwd.classList.contains('active')) {
             btnPumpFwd.classList.remove('active');
-            packet[2] &= ~0x08; // 펌핑 정전 해제
+            packet[2] &= ~0x08;
         } else {
             btnPumpFwd.classList.add('active');
             btnPumpRev.classList.remove('active');
-            packet[2] |= 0x08;  // Byte 3, Bit 3 (0x08) = 펌핑 정전
-            packet[2] &= ~0x10; // Byte 3, Bit 4 (0x10) = 펌핑 역전 해제
+            packet[2] |= 0x08;
+            packet[2] &= ~0x10;
         }
     });
 
@@ -628,12 +622,12 @@
         e.preventDefault();
         if (btnPumpRev.classList.contains('active')) {
             btnPumpRev.classList.remove('active');
-            packet[2] &= ~0x10; // 펌핑 역전 해제
+            packet[2] &= ~0x10;
         } else {
             btnPumpRev.classList.add('active');
             btnPumpFwd.classList.remove('active');
-            packet[2] |= 0x10;  // Byte 3, Bit 4 (0x10) = 펌핑 역전
-            packet[2] &= ~0x08; // Byte 3, Bit 3 (0x08) = 펌핑 정전 해제
+            packet[2] |= 0x10;
+            packet[2] &= ~0x08;
         }
     });
 </script>
