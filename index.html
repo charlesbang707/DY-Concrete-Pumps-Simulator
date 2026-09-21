@@ -132,7 +132,7 @@
             <button class="btn" id="btnRpmDn">- RPM</button>
         </div>
         
-        <!-- 토출량 -->
+        <!-- 토출량 다이얼 -->
         <div class="dial-container" id="dialA8">
             <div class="dial-title">토출량(A8)</div>
             <div class="dial"><div class="dial-ptr" id="ptrA8"></div></div>
@@ -150,7 +150,7 @@
             <button class="btn" id="btnPumpRev">역전</button>
         </div>
 
-        <!-- BOOM SPD -->
+        <!-- BOOM SPD 다이얼 -->
         <div class="dial-container" id="dialA7">
             <div class="dial-title">BOOM SPD</div>
             <div class="dial"><div class="dial-ptr" id="ptrA7"></div></div>
@@ -178,10 +178,10 @@
 
         // 12-byte packet
         const packet = new Uint8Array(12);
-        packet.fill(0);          // 스위치 0x00 초기화 (00 00 00 00)
+        packet.fill(0);          // 스위치 비트 초기화 (0x00)
         packet.fill(127, 4, 10); // 조이스틱 중립값 127(0x7F) 설정
-        packet[10] = 128;
-        packet[11] = 128;
+        packet[10] = 128;        // BOOM SPD 초기값 128(0x80)
+        packet[11] = 128;        // 토출량 초기값 128(0x80)
 
         const $ = (id) => document.getElementById(id);
 
@@ -206,7 +206,7 @@
             $("connectBtn").innerText = "ESP32 연결하기";
         }
 
-        // ---------- BLE ----------
+        // ---------- BLE 연결 ----------
         $("connectBtn").addEventListener("click", async () => {
             if (!navigator.bluetooth) {
                 setStatus("Web Bluetooth 미지원");
@@ -245,7 +245,7 @@
 
                 stopSending();
 
-                // 80ms 주기 타이머 시작 (이 타이머만 BLE 전송을 담당)
+                // 80ms 주기 타이머 시작 (이 타이머만 BLE 전송 담당)
                 sendTimer = setInterval(() => {
                     sendBLEData();
                 }, 80);
@@ -259,7 +259,7 @@
             }
         });
 
-        // 80ms 타이머에 의해서만 호출되는 전송 전용 함수
+        // 80ms 타이머에 의해서만 실행되는 전송 전용 함수
         async function sendBLEData() {
             if (!isConnected || !bleCharacteristic || isSending) return;
             isSending = true;
@@ -268,7 +268,6 @@
                 const data = packet.slice();
                 const props = bleCharacteristic.properties || {};
 
-                // Bluefy 통신 병목 방지: writeWithoutResponse 우선 사용
                 if (props.writeWithoutResponse && typeof bleCharacteristic.writeValueWithoutResponse === "function") {
                     await bleCharacteristic.writeValueWithoutResponse(data);
                 } else if (typeof bleCharacteristic.writeValueWithResponse === "function") {
@@ -330,7 +329,6 @@
                 const valX = Math.max(0, Math.min(255, Math.round((nx + 1) * 127)));
                 const valY = Math.max(0, Math.min(255, Math.round((ny + 1) * 127)));
 
-                // 배열 값만 업데이트 (직접 sendBLEData 호출 안 함)
                 packet[idxX] = valX;
                 packet[idxY] = valY;
                 valDisp.innerHTML = `${labelX}: ${valX}<br>${labelY}: ${valY}`;
@@ -375,7 +373,7 @@
         initJoystick("areaCenter", "knobCenter", "valCenter", "2붐(A6)", "3붐(A5)", 9, 8);
         initJoystick("areaRight",  "knobRight",  "valRight",  "X",       "Y",       7, 6);
 
-        // ---------- DIALS ----------
+        // ---------- DIALS (볼륨 수정 완료) ----------
         function initDial(containerId, ptrId, valId, packetIdx) {
             const container = $(containerId);
             const ptr = $(ptrId);
@@ -409,7 +407,6 @@
                 const dy = startY - touch.clientY;
                 const newVal = Math.min(255, Math.max(0, startVal + Math.round(dy * 1.5)));
 
-                // 배열 값만 업데이트
                 packet[packetIdx] = newVal;
                 valDisp.innerText = newVal;
                 ptr.style.transform = `rotate(${-135 + (newVal / 255) * 270}deg)`;
@@ -425,32 +422,34 @@
             });
         }
 
-        initDial("dialA8", "ptrA8", "valA8", 11);
-        initDial("dialA7", "ptrA7", "valA7", 10);
+        initDial("dialA8", "ptrA8", "valA8", 11); // 토출량
+        initDial("dialA7", "ptrA7", "valA7", 10); // BOOM SPD
 
-        // ---------- 모멘터리 버튼 (누르는 동안만 ON) ----------
+        // ---------- MOMENTARY BUTTONS ----------
         function addMomentaryButton(id, byteIdx, bitMask) {
             const btn = $(id);
             if (!btn) return;
 
-            const press = (e) => {
+            btn.addEventListener("touchstart", (e) => {
                 e.preventDefault();
                 btn.classList.add("active");
-                packet[byteIdx] |= bitMask; // 비트 세팅만 수행
-            };
+                packet[byteIdx] |= bitMask;
+            }, { passive: false });
 
-            const release = (e) => {
+            btn.addEventListener("touchend", (e) => {
                 e.preventDefault();
                 btn.classList.remove("active");
-                packet[byteIdx] &= (~bitMask & 0xFF); // 비트 해제만 수행
-            };
+                packet[byteIdx] &= (~bitMask & 0xFF);
+            }, { passive: false });
 
-            btn.addEventListener("touchstart", press, { passive: false });
-            btn.addEventListener("touchend", release, { passive: false });
-            btn.addEventListener("touchcancel", release, { passive: false });
+            btn.addEventListener("touchcancel", (e) => {
+                e.preventDefault();
+                btn.classList.remove("active");
+                packet[byteIdx] &= (~bitMask & 0xFF);
+            }, { passive: false });
         }
 
-        // ---------- 토글형 배타적 2버튼 제어 함수 (재터치 시 OFF) ----------
+        // ---------- TOGGLE PAIRS (재터치 시 OFF) ----------
         function setupToggleExclusivePair(btn1Id, btn2Id, byteIdx, mask1, mask2) {
             const btn1 = $(btn1Id);
             const btn2 = $(btn2Id);
@@ -461,11 +460,9 @@
                 const isOn = (packet[byteIdx] & mask1) !== 0;
 
                 if (isOn) {
-                    // 이미 켜진 경우 -> 끔 (OFF)
                     packet[byteIdx] &= ~mask1;
                     btn1.classList.remove("active");
                 } else {
-                    // 꺼진 경우 -> 상대방 끄고 자신 켬 (ON)
                     packet[byteIdx] &= ~mask2;
                     packet[byteIdx] |= mask1;
                     btn2.classList.remove("active");
@@ -478,11 +475,9 @@
                 const isOn = (packet[byteIdx] & mask2) !== 0;
 
                 if (isOn) {
-                    // 이미 켜진 경우 -> 끔 (OFF)
                     packet[byteIdx] &= ~mask2;
                     btn2.classList.remove("active");
                 } else {
-                    // 꺼진 경우 -> 상대방 끄고 자신 켬 (ON)
                     packet[byteIdx] &= ~mask1;
                     packet[byteIdx] |= mask2;
                     btn1.classList.remove("active");
@@ -491,13 +486,13 @@
             }, { passive: false });
         }
 
-        // 1) BOOM / OUT (4번 바이트 / index 3): BOOM(0x02), OUT(0x20) - 토글 적용
+        // BOOM / OUT 토글 (재터치 시 OFF)
         setupToggleExclusivePair("btnBoom", "btnOut", 3, 0x02, 0x20);
 
-        // 2) 정전 / 역전 (3번 바이트 / index 2): 정전(0x08), 역전(0x10) - 토글 적용
+        // 정전 / 역전 토글 (재터치 시 OFF)
         setupToggleExclusivePair("btnPumpFwd", "btnPumpRev", 2, 0x08, 0x10);
 
-        // Momentary switches (누르고 있을 때만 동작)
+        // Momentary switches
         addMomentaryButton("btnStart",     3, 0x01);
         addMomentaryButton("btnMotion",    2, 0x80);
         addMomentaryButton("btnRpmUp",     2, 0x02);
@@ -508,7 +503,7 @@
         addMomentaryButton("btnHoseOpen",  3, 0x40);
         addMomentaryButton("btnHoseClose", 3, 0x80);
 
-        // Bluefy 터치 스크롤 방지
+        // 터치 스크롤 방지
         document.addEventListener("touchmove", (e) => {
             if (e.target.closest(".btn, .side-btn, .btn-gss, .stick-area, .dial-container")) {
                 e.preventDefault();
