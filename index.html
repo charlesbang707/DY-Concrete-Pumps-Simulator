@@ -12,311 +12,338 @@
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
-            touch-action: none;
         }
 
+        /* 
+         세로모드에서도 가로모드와 동일한 구성을 유지하도록 
+         최소 너비(850px)를 강제하여 레이아웃 붕괴를 막습니다. 
+        */
         html, body {
-            width: 100vw;
+            width: 100%;
             height: 100vh;
             height: 100dvh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            overflow: hidden;
-            background-color: #121214;
+            background-color: #1a1a1a;
             color: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow-x: auto;
+            overflow-y: hidden;
+            touch-action: pan-x pan-y; /* 스크롤은 허용하되 컨트롤러 조작 방해 금지 */
         }
 
         .app-root {
             display: flex;
-            width: 100%;
+            width: max(100vw, 850px);
             height: 100%;
-            padding: calc(4px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
-            box-sizing: border-box;
-            gap: 8px;
+            padding: 10px;
+            gap: 10px;
         }
 
+        /* 좌우 대칭 세로 버튼 패널 */
+        .side-panel {
+            width: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            flex-shrink: 0;
+        }
+
+        .btn-vertical {
+            height: 120px;
+            width: 100%;
+            border-radius: 8px;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            font-weight: 900;
+            font-size: 14px;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
+
+        .btn-start { background: #30d158; color: #000; border: 2px solid #248a3d; }
+        .btn-start.active { background: #248a3d; transform: scale(0.95); }
+
+        .btn-motion { background: #ffd60a; color: #000; border: 2px solid #ccaa00; }
+        .btn-motion.active { background: #ccaa00; transform: scale(0.95); }
+
+        /* 메인 패널 */
         .main-panel {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            min-width: 0;
+            gap: 10px;
         }
 
-        .side-panel {
-            width: 52px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .btn-d8-motion {
-            flex: 1;
-            background: #ff9500;
-            color: #ffffff;
-            border: 2px solid #ffcc00;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 13px;
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            letter-spacing: 2px;
-            box-shadow: 0 0 10px rgba(255, 149, 0, 0.4);
-            cursor: pointer;
-        }
-        .btn-d8-motion.active {
-            background: #cc7700;
-            box-shadow: 0 0 16px rgba(255, 204, 0, 0.8);
-            transform: scale(0.97);
-        }
-
+        /* 상단 헤더 */
         .header-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 32px;
-            background: #1e1e22;
+            height: 35px;
+            background: #252525;
             border-radius: 6px;
-            padding: 0 10px;
-            flex-shrink: 0;
+            padding: 0 15px;
         }
-
-        .header-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .status-text { font-weight: bold; font-size: 12px; color: #ff453a; }
+        .status-text { font-weight: bold; font-size: 14px; color: #ff453a; }
         .status-text.connected { color: #30d158; }
-
         .btn-connect {
             background-color: #0a84ff;
             color: white;
             border: none;
-            padding: 4px 10px;
+            padding: 6px 16px;
             border-radius: 5px;
             font-weight: bold;
-            font-size: 11px;
             cursor: pointer;
         }
 
-        .btn-start-d1 {
-            background-color: #30d158;
-            color: black;
-            border: none;
-            padding: 4px 12px;
-            border-radius: 5px;
-            font-weight: bold;
-            font-size: 11px;
-            cursor: pointer;
-            box-shadow: 0 0 6px rgba(48, 209, 88, 0.5);
-        }
-        .btn-start-d1.active {
-            background-color: #248a3d;
-            color: white;
-        }
-
+        /* 조이스틱 영역 */
         .joystick-section {
             display: flex;
-            gap: 8px;
-            flex: 1.1;
-            min-height: 0;
+            gap: 10px;
+            flex: 1;
         }
 
         .joystick-card {
             flex: 1;
-            background: #1c1c20;
-            border: 1px solid #2c2c32;
-            border-radius: 10px;
+            background: #222;
+            border: 1px solid #333;
+            border-radius: 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: space-evenly;
-            padding: 4px;
+            justify-content: space-between;
+            padding: 10px;
         }
 
-        .card-title { font-size: 11px; color: #0a84ff; font-weight: bold; }
-
+        .card-title { font-size: 13px; color: #64d2ff; font-weight: bold; }
+        
         .stick-area {
-            width: 84px;
-            height: 84px;
+            width: 120px;
+            height: 120px;
             border-radius: 50%;
-            background: #282830;
-            border: 2px solid #3a3a45;
+            background: #111;
+            border: 2px solid #444;
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
+            touch-action: none;
         }
 
         .stick-handle {
-            width: 34px;
-            height: 34px;
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
-            background: radial-gradient(circle, #e5e5ea 0%, #8e8e93 100%);
-            border: 2px solid #ffffff;
+            background: radial-gradient(circle, #ddd 0%, #888 100%);
+            border: 2px solid #fff;
             position: absolute;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.5);
             pointer-events: none;
         }
 
-        .slider-box {
-            width: 92%;
+        .slider-box { width: 90%; text-align: center; }
+        .slider-label { font-size: 12px; color: #ffd60a; margin-bottom: 5px; font-weight: bold; }
+        .custom-slider { width: 100%; height: 6px; accent-color: #ffd60a; }
+
+        /* 하단 컨트롤 패널 */
+        .bottom-controls {
+            height: 120px;
+            background: #222;
+            border: 1px solid #333;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+            gap: 5px;
+        }
+
+        .ctrl-group {
             display: flex;
             flex-direction: column;
             align-items: center;
+            gap: 6px;
         }
 
-        .slider-label { font-size: 10px; color: #ffd60a; margin-bottom: 2px; }
-        .custom-slider { width: 100%; height: 16px; accent-color: #ffd60a; }
+        .group-label { font-size: 10px; color: #aaa; font-weight: bold; text-transform: uppercase; }
 
-        .control-panel {
-            flex: 0.9;
-            min-height: 0;
-            background: #1c1c20;
-            border: 1px solid #2c2c32;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            padding: 4px 6px;
-        }
-
-        .group-box {
+        .btn-grid {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 3px;
+            gap: 6px;
         }
-
-        .group-title { font-size: 9px; color: #8e8e93; font-weight: bold; }
 
         .btn-ctrl {
-            width: 42px;
-            height: 28px;
-            background: #2c2c32;
-            color: #ccc;
-            border: 1px solid #44444e;
-            border-radius: 5px;
-            font-size: 10px;
+            width: 55px;
+            height: 35px;
+            background: #333;
+            color: #ddd;
+            border: 1px solid #555;
+            border-radius: 6px;
+            font-size: 11px;
             font-weight: bold;
+            cursor: pointer;
+            touch-action: none;
         }
-
+        .btn-ctrl:disabled { opacity: 0.3; }
         .btn-ctrl.active {
             background: #0a84ff;
-            color: #ffffff;
+            color: #fff;
             border-color: #64d2ff;
-            box-shadow: 0 0 8px rgba(10, 132, 255, 0.6);
         }
 
+        /* 회전 노브 UI */
+        .knob-wrapper { display: flex; flex-direction: column; align-items: center; gap: 4px; touch-action: none; }
         .knob-container {
-            width: 34px;
-            height: 34px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
-            border: 2px solid #ffd60a;
+            border: 3px solid #ffd60a;
+            position: relative;
+            background: #111;
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
-            background: #282830;
-            cursor: pointer;
         }
         .knob-pointer {
-            width: 2px;
-            height: 13px;
+            width: 3px;
+            height: 20px;
             background: #ffd60a;
             position: absolute;
-            top: 2px;
-            border-radius: 1px;
+            top: 3px;
+            border-radius: 2px;
             transform-origin: bottom center;
             transform: rotate(-135deg);
         }
-        .knob-val { font-size: 9px; color: #ffd60a; font-weight: bold; }
+        .knob-val { font-size: 12px; color: #ffd60a; font-weight: bold; }
+
+        /* GSS 대형 버튼 */
+        .btn-gss {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: #ff453a;
+            color: white;
+            border: 4px solid #fff;
+            font-size: 18px;
+            font-weight: 900;
+            box-shadow: 0 0 15px rgba(255, 69, 58, 0.6);
+            touch-action: none;
+            cursor: pointer;
+        }
+        .btn-gss.active { transform: scale(0.92); background: #cc2211; }
     </style>
 </head>
 <body>
 
 <div class="app-root">
+    <!-- 1. 좌측 하단 START 패널 -->
+    <div class="side-panel">
+        <div class="btn-vertical btn-start" id="btnStartD1">START</div>
+    </div>
+
     <div class="main-panel">
+        <!-- 상단 상태바 -->
         <div class="header-bar">
             <div id="status" class="status-text">BLE 미연결</div>
-            <div class="header-actions">
-                <button class="btn-start-d1" id="btnStartD1">AIR CUFF (D1)</button>
-                <button class="btn-connect" onclick="connectBLE()">ESP32 연결하기</button>
-            </div>
+            <button class="btn-connect" onclick="connectBLE()">ESP32 연결하기</button>
         </div>
 
+        <!-- 조이스틱 영역 -->
         <div class="joystick-section">
             <div class="joystick-card">
-                <div class="card-title">좌측 조이스틱 (L3/L2)</div>
-                <div class="stick-area" id="areaLeft">
-                    <div class="stick-handle" id="stickLeft"></div>
-                </div>
+                <div class="card-title">좌측 조이스틱 (4붐/5붐)</div>
+                <div class="stick-area" id="areaLeft"><div class="stick-handle" id="stickLeft"></div></div>
                 <div class="slider-box">
-                    <div class="slider-label" id="lblA5">3붐 제어 (L2): 128</div>
+                    <div class="slider-label" id="lblA5">3붐 회전 (A5): 128</div>
                     <input type="range" id="sliderA5" class="custom-slider" min="0" max="255" value="128">
                 </div>
             </div>
 
             <div class="joystick-card">
-                <div class="card-title">우측 조이스틱 (R3/R2)</div>
-                <div class="stick-area" id="areaRight">
-                    <div class="stick-handle" id="stickRight"></div>
-                </div>
+                <div class="card-title">우측 조이스틱 (스윙/1붐)</div>
+                <div class="stick-area" id="areaRight"><div class="stick-handle" id="stickRight"></div></div>
                 <div class="slider-box">
-                    <div class="slider-label" id="lblA6">2붐 제어 (R2): 128</div>
+                    <div class="slider-label" id="lblA6">2붐 회전 (A6): 128</div>
                     <input type="range" id="sliderA6" class="custom-slider" min="0" max="255" value="128">
                 </div>
             </div>
         </div>
 
-        <div class="control-panel">
-            <div class="group-box">
-                <div class="group-title">BOOM/OUT</div>
-                <button class="btn-ctrl active" id="btnBoom">BOOM</button>
-                <button class="btn-ctrl" id="btnOut">OUT</button>
+        <!-- 하단 컨트롤 영역 (이미지와 동일한 배치) -->
+        <div class="bottom-controls">
+            <div class="ctrl-group">
+                <div class="group-label">BOOM/OUT</div>
+                <div class="btn-grid">
+                    <button class="btn-ctrl active" id="btnBoom">BOOM</button>
+                    <button class="btn-ctrl" id="btnOut">OUT</button>
+                </div>
             </div>
 
-            <div class="group-box">
-                <div class="group-title">RPM</div>
-                <button class="btn-ctrl" id="btnRpmPlus">+ RPM</button>
-                <button class="btn-ctrl" id="btnRpmMinus">- RPM</button>
+            <div class="ctrl-group">
+                <div class="group-label">N/A</div>
+                <div class="btn-grid">
+                    <button class="btn-ctrl" disabled>D9</button>
+                    <button class="btn-ctrl" disabled>D12</button>
+                </div>
             </div>
 
-            <div class="group-box">
-                <div class="group-title">토출량</div>
+            <div class="ctrl-group">
+                <div class="group-label">RPM</div>
+                <div class="btn-grid">
+                    <button class="btn-ctrl" id="btnRpmPlus">+ RPM</button>
+                    <button class="btn-ctrl" id="btnRpmMinus">- RPM</button>
+                </div>
+            </div>
+
+            <div class="knob-wrapper">
+                <div class="group-label">토출량(A8)</div>
                 <div class="knob-container" id="knobA8"><div class="knob-pointer" id="ptrA8"></div></div>
                 <div class="knob-val" id="valA8">128</div>
             </div>
 
-            <div class="group-box">
-                <div class="group-title">기능</div>
-                <button class="btn-ctrl" id="btnHorn">HORN</button>
-                <button class="btn-ctrl" id="btnStroke">행정변환</button>
+            <div class="ctrl-group" style="justify-content: center;">
+                <button class="btn-gss" id="btnGSS">GSS</button>
             </div>
 
-            <div class="group-box">
-                <div class="group-title">PUMP</div>
-                <button class="btn-ctrl" id="btnPumpFwd">정전</button>
-                <button class="btn-ctrl" id="btnPumpRev">역전</button>
+            <div class="ctrl-group">
+                <div class="group-label">HORN/JUMP</div>
+                <div class="btn-grid">
+                    <button class="btn-ctrl" id="btnHorn">HORN</button>
+                    <button class="btn-ctrl" id="btnJump">JUMP</button>
+                </div>
             </div>
 
-            <div class="group-box">
-                <div class="group-title">END HOSE</div>
-                <button class="btn-ctrl" id="btnHoseOpen">OPEN</button>
-                <button class="btn-ctrl" id="btnHoseClose">CLOSE</button>
+            <div class="ctrl-group">
+                <div class="group-label">PUMP</div>
+                <div class="btn-grid">
+                    <button class="btn-ctrl" id="btnPumpFwd">정전</button>
+                    <button class="btn-ctrl" id="btnPumpRev">역전</button>
+                </div>
+            </div>
+
+            <div class="knob-wrapper">
+                <div class="group-label">BOOM SPD</div>
+                <div class="knob-container" id="knobA7"><div class="knob-pointer" id="ptrA7"></div></div>
+                <div class="knob-val" id="valA7">128</div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="group-label">END HOSE</div>
+                <div class="btn-grid">
+                    <button class="btn-ctrl" id="btnHoseOpen">OPEN</button>
+                    <button class="btn-ctrl" id="btnHoseClose">CLOSE</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 우측 MOTION CONTROL (D8) 패널 원상 복구 -->
+    <!-- 2. 우측 하단 MOTION 패널 -->
     <div class="side-panel">
-        <button class="btn-d8-motion" id="btnMotionD8">MOTION CONTROL (D8)</button>
+        <div class="btn-vertical btn-motion" id="btnMotionD8">MOTION</div>
     </div>
 </div>
 
@@ -328,17 +355,25 @@
     let gattCharacteristic = null;
     let isConnected = false;
     let isSending = false;
+    let sendInterval = null; // 원복된 타이머
 
     const encoder = new TextEncoder();
-
-    // 12바이트 원본 데이터 패킷
     let packet = new Uint8Array(12);
     packet[0] = 0x00;
     packet[1] = 0x00;
     packet[2] = 0x00;
-    packet[3] = 0x02; // BOOM 기본 모드
-    packet.fill(128, 4, 12); // 아날로그 중립
+    packet[3] = 0x02; // BOOM 기본
+    packet.fill(128, 4, 12); // 조이스틱/아날로그 중립
 
+    // 터치 이벤트 유틸 (레이아웃 틀어짐 방지)
+    function attachTouch(el, start, move, end) {
+        el.addEventListener('touchstart', (e) => { e.preventDefault(); if(start) start(e); }, {passive:false});
+        el.addEventListener('touchmove', (e) => { e.preventDefault(); if(move) move(e); }, {passive:false});
+        el.addEventListener('touchend', (e) => { e.preventDefault(); if(end) end(e); }, {passive:false});
+        el.addEventListener('touchcancel', (e) => { e.preventDefault(); if(end) end(e); }, {passive:false});
+    }
+
+    // 4. 잘되던 시절의 setInterval 블루투스 80ms 통신 롤백
     async function connectBLE() {
         try {
             const statusDiv = document.getElementById("status");
@@ -349,7 +384,6 @@
                 optionalServices: [SERVICE_UUID]
             });
 
-            statusDiv.innerText = "연결 중...";
             const server = await bleDevice.gatt.connect();
             const service = await server.getPrimaryService(SERVICE_UUID);
             gattCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
@@ -358,11 +392,13 @@
             statusDiv.innerText = "연결됨 (80ms)";
             statusDiv.className = "status-text connected";
 
-            // 전송 루프 시작
-            sendLoop();
+            // 기존에 잘 작동하던 setInterval 방식으로 복원
+            if(sendInterval) clearInterval(sendInterval);
+            sendInterval = setInterval(sendBLEData, 80);
 
             bleDevice.addEventListener('gattserverdisconnected', () => {
                 isConnected = false;
+                clearInterval(sendInterval);
                 statusDiv.innerText = "BLE 연결 끊김";
                 statusDiv.className = "status-text";
             });
@@ -371,266 +407,156 @@
         }
     }
 
-    // 80ms 주기 안전 전송 루프
-    async function sendLoop() {
-        while (isConnected && gattCharacteristic) {
-            const startTime = Date.now();
+    async function sendBLEData() {
+        if (!isConnected || !gattCharacteristic || isSending) return;
+        isSending = true;
 
-            if (!isSending) {
-                isSending = true;
-                try {
-                    let hexStr = "";
-                    for (let i = 0; i < packet.length; i++) {
-                        const hex = packet[i].toString(16).padStart(2, '0').toUpperCase();
-                        hexStr += (i === 0) ? hex : (" " + hex);
-                    }
-                    hexStr += "\n";
-
-                    const dataBuffer = encoder.encode(hexStr);
-                    await gattCharacteristic.writeValueWithoutResponse(dataBuffer);
-                } catch (e) {
-                    console.error("BLE 송신 에러:", e);
-                } finally {
-                    isSending = false;
-                }
+        try {
+            let hexStr = "";
+            for (let i = 0; i < packet.length; i++) {
+                hexStr += packet[i].toString(16).padStart(2, '0').toUpperCase() + (i===packet.length-1?"":" ");
             }
-
-            const elapsed = Date.now() - startTime;
-            // Target interval = 80ms (iOS Bluefy 검증 주기)
-            const delay = Math.max(0, 80 - elapsed);
-            await new Promise(resolve => setTimeout(resolve, delay));
+            hexStr += "\n";
+            
+            const dataBuffer = encoder.encode(hexStr);
+            await gattCharacteristic.writeValueWithoutResponse(dataBuffer);
+        } catch (e) {
+            console.error("BLE 발송 에러:", e);
+        } finally {
+            isSending = false;
         }
     }
 
-    // --- 조이스틱 제어 로직 ---
-    function setupLeftJoystick() {
-        const area = document.getElementById('areaLeft');
-        const stick = document.getElementById('stickLeft');
-        const maxRadius = 24;
+    // --- 조이스틱 제어 ---
+    function setupJoystick(areaId, stickId, xIdx, yIdx, upBit, downBit, leftBit, rightBit, byte0Idx, byte1Idx) {
+        const area = document.getElementById(areaId);
+        const stick = document.getElementById(stickId);
+        const maxRadius = 35;
 
-        function updateStick(e) {
-            const touch = e.touches[0];
+        function update(e) {
             const rect = area.getBoundingClientRect();
-            const deltaX = touch.clientX - (rect.left + rect.width / 2);
-            const deltaY = touch.clientY - (rect.top + rect.height / 2);
-            const dist = Math.hypot(deltaX, deltaY);
-
-            let normX = deltaX / maxRadius;
-            let normY = deltaY / maxRadius;
-            if (dist > maxRadius) {
-                normX /= (dist / maxRadius);
-                normY /= (dist / maxRadius);
-            }
-
-            stick.style.transform = `translate(${normX * maxRadius}px, ${normY * maxRadius}px)`;
-
-            const valX = Math.round((normX + 1) * 127.5);
-            const valY = Math.round((normY + 1) * 127.5);
-
-            packet[5] = valX;
-            packet[4] = valY;
-
-            if (valY < 80) { packet[0] |= 0x01; packet[1] &= ~0x01; }
-            else if (valY > 175) { packet[1] |= 0x01; packet[0] &= ~0x01; }
-            else { packet[0] &= ~0x01; packet[1] &= ~0x01; }
-
-            if (valX > 175) { packet[0] |= 0x02; packet[1] &= ~0x02; }
-            else if (valX < 80) { packet[1] |= 0x02; packet[0] &= ~0x02; }
-            else { packet[0] &= ~0x02; packet[1] &= ~0x02; }
-        }
-
-        function resetStick() {
-            stick.style.transform = `translate(0px, 0px)`;
-            packet[4] = 128;
-            packet[5] = 128;
-            packet[0] &= ~0x03;
-            packet[1] &= ~0x03;
-        }
-
-        area.addEventListener('touchstart', (e) => { e.preventDefault(); updateStick(e); });
-        area.addEventListener('touchmove', (e) => { e.preventDefault(); updateStick(e); });
-        area.addEventListener('touchend', (e) => { e.preventDefault(); resetStick(); });
-    }
-
-    function setupRightJoystick() {
-        const area = document.getElementById('areaRight');
-        const stick = document.getElementById('stickRight');
-        const maxRadius = 24;
-
-        function updateStick(e) {
             const touch = e.touches[0];
-            const rect = area.getBoundingClientRect();
-            const deltaX = touch.clientX - (rect.left + rect.width / 2);
-            const deltaY = touch.clientY - (rect.top + rect.height / 2);
-            const dist = Math.hypot(deltaX, deltaY);
+            const dx = touch.clientX - (rect.left + rect.width/2);
+            const dy = touch.clientY - (rect.top + rect.height/2);
+            const dist = Math.hypot(dx, dy);
 
-            let normX = deltaX / maxRadius;
-            let normY = deltaY / maxRadius;
-            if (dist > maxRadius) {
-                normX /= (dist / maxRadius);
-                normY /= (dist / maxRadius);
-            }
+            let nx = dx/maxRadius, ny = dy/maxRadius;
+            if(dist > maxRadius) { nx /= (dist/maxRadius); ny /= (dist/maxRadius); }
+            
+            stick.style.transform = `translate(${nx * maxRadius}px, ${ny * maxRadius}px)`;
 
-            stick.style.transform = `translate(${normX * maxRadius}px, ${normY * maxRadius}px)`;
+            const vx = Math.round((nx + 1) * 127.5);
+            const vy = Math.round((ny + 1) * 127.5);
+            packet[xIdx] = vx; packet[yIdx] = vy;
 
-            const valX = Math.round((normX + 1) * 127.5);
-            const valY = Math.round((normY + 1) * 127.5);
+            // 상하 스위치 비트
+            if(vy < 80) { packet[byte0Idx] |= upBit; packet[byte1Idx] &= ~upBit; }
+            else if(vy > 175) { packet[byte1Idx] |= upBit; packet[byte0Idx] &= ~upBit; }
+            else { packet[byte0Idx] &= ~upBit; packet[byte1Idx] &= ~upBit; }
 
-            packet[7] = valX;
-            packet[6] = valY;
-
-            if (valY > 175) { packet[0] |= 0x04; packet[1] &= ~0x04; }
-            else if (valY < 80) { packet[1] |= 0x04; packet[0] &= ~0x04; }
-            else { packet[0] &= ~0x04; packet[1] &= ~0x04; }
-
-            if (valX > 175) { packet[0] |= 0x08; packet[1] &= ~0x08; }
-            else if (valX < 80) { packet[1] |= 0x08; packet[0] &= ~0x08; }
-            else { packet[0] &= ~0x08; packet[1] &= ~0x08; }
-        }
-
-        function resetStick() {
-            stick.style.transform = `translate(0px, 0px)`;
-            packet[6] = 128;
-            packet[7] = 128;
-            packet[0] &= ~0x0C;
-            packet[1] &= ~0x0C;
-        }
-
-        area.addEventListener('touchstart', (e) => { e.preventDefault(); updateStick(e); });
-        area.addEventListener('touchmove', (e) => { e.preventDefault(); updateStick(e); });
-        area.addEventListener('touchend', (e) => { e.preventDefault(); resetStick(); });
-    }
-
-    setupLeftJoystick();
-    setupRightJoystick();
-
-    // --- 슬라이더 바인딩 ---
-    function setupSlider(sliderId, labelId, title, packetIdx, bitUpShift, bitDownShift) {
-        const slider = document.getElementById(sliderId);
-        const label = document.getElementById(labelId);
-
-        function onInput() {
-            const val = parseInt(slider.value);
-            label.innerText = `${title}: ${val}`;
-            packet[packetIdx] = val;
-
-            if (val > 175) { packet[0] |= (1 << bitUpShift); packet[1] &= ~(1 << bitUpShift); }
-            else if (val < 80) { packet[1] |= (1 << bitDownShift); packet[0] &= ~(1 << bitDownShift); }
-            else { 
-                packet[0] &= ~(1 << bitUpShift); 
-                packet[1] &= ~(1 << bitDownShift); 
-            }
+            // 좌우 스위치 비트
+            if(vx > 175) { packet[byte0Idx] |= leftBit; packet[byte1Idx] &= ~leftBit; }
+            else if(vx < 80) { packet[byte1Idx] |= leftBit; packet[byte0Idx] &= ~leftBit; }
+            else { packet[byte0Idx] &= ~leftBit; packet[byte1Idx] &= ~leftBit; }
         }
 
         function reset() {
-            slider.value = 128;
-            label.innerText = `${title}: 128`;
-            packet[packetIdx] = 128;
-            packet[0] &= ~(1 << bitUpShift);
-            packet[1] &= ~(1 << bitDownShift);
+            stick.style.transform = 'translate(0px,0px)';
+            packet[xIdx] = 128; packet[yIdx] = 128;
+            packet[byte0Idx] &= ~(upBit | leftBit);
+            packet[byte1Idx] &= ~(upBit | leftBit);
         }
-
-        slider.addEventListener('input', onInput);
-        slider.addEventListener('touchend', reset);
-        slider.addEventListener('mouseup', reset);
+        attachTouch(area, update, update, reset);
     }
 
-    setupSlider('sliderA5', 'lblA5', '3붐 제어 (L2)', 8, 4, 4);
-    setupSlider('sliderA6', 'lblA6', '2붐 제어 (R2)', 9, 5, 5);
+    setupJoystick('areaLeft', 'stickLeft', 5, 4, 0x01, 0x01, 0x02, 0x02, 0, 1);
+    setupJoystick('areaRight', 'stickRight', 7, 6, 0x04, 0x04, 0x08, 0x08, 0, 1);
 
-    // --- 노브 바인딩 ---
-    const knobA8 = document.getElementById('knobA8');
-    const ptrA8 = document.getElementById('ptrA8');
-    const valA8 = document.getElementById('valA8');
-    let startY = 0, startVal = 128;
-
-    knobA8.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        startY = e.touches[0].clientY;
-        startVal = packet[11];
-    });
-
-    knobA8.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        let deltaY = startY - e.touches[0].clientY;
-        let newVal = Math.min(255, Math.max(0, startVal + Math.round(deltaY * 1.5)));
-        
-        packet[11] = newVal;
-        valA8.innerText = newVal;
-        ptrA8.style.transform = `rotate(${-135 + (newVal / 255) * 270}deg)`;
-    });
-
-    // --- 모멘터리 버튼 바인딩 ---
-    function bindMomentary(btnId, packetIdx, bitShift) {
-        const btn = document.getElementById(btnId);
-        btn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            btn.classList.add('active');
-            packet[packetIdx] |= (1 << bitShift);
+    // --- 가로 슬라이더 ---
+    function setupSlider(id, lblId, title, idx) {
+        const el = document.getElementById(id);
+        const lbl = document.getElementById(lblId);
+        el.addEventListener('input', () => {
+            packet[idx] = parseInt(el.value);
+            lbl.innerText = `${title}: ${el.value}`;
         });
-        btn.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            btn.classList.remove('active');
-            packet[packetIdx] &= ~(1 << bitShift);
+        el.addEventListener('touchend', () => {
+            el.value = 128; packet[idx] = 128; lbl.innerText = `${title}: 128`;
         });
     }
+    setupSlider('sliderA5', 'lblA5', '3붐 회전 (A5)', 8);
+    setupSlider('sliderA6', 'lblA6', '2붐 회전 (A6)', 9);
 
-    bindMomentary('btnStartD1', 3, 0);      // AIR CUFF (D1)
-    bindMomentary('btnMotionD8', 2, 7);     // MOTION CONTROL (D8) 복구
-    bindMomentary('btnRpmPlus', 2, 1);
-    bindMomentary('btnRpmMinus', 2, 2);
-    bindMomentary('btnHorn', 2, 5);
-    bindMomentary('btnStroke', 2, 6);
-    bindMomentary('btnHoseOpen', 3, 6);
-    bindMomentary('btnHoseClose', 3, 7);
+    // --- 회전 노브 (토출량, BOOM SPD) ---
+    function setupKnob(knobId, ptrId, valId, packetIdx) {
+        const knob = document.getElementById(knobId);
+        const ptr = document.getElementById(ptrId);
+        const valDisp = document.getElementById(valId);
+        let startY = 0, startVal = 128;
 
-    // --- BOOM/OUT 토글 버튼 ---
+        attachTouch(knob,
+            (e) => { startY = e.touches[0].clientY; startVal = packet[packetIdx]; },
+            (e) => {
+                let dy = startY - e.touches[0].clientY;
+                let newVal = Math.min(255, Math.max(0, startVal + Math.round(dy * 1.5)));
+                packet[packetIdx] = newVal;
+                valDisp.innerText = newVal;
+                ptr.style.transform = `rotate(${-135 + (newVal / 255) * 270}deg)`;
+            },
+            null
+        );
+    }
+    setupKnob('knobA8', 'ptrA8', 'valA8', 11);
+    setupKnob('knobA7', 'ptrA7', 'valA7', 10);
+
+    // --- 단순 누름(Momentary) 버튼 ---
+    function bindMom(id, byteIdx, bitMask) {
+        const btn = document.getElementById(id);
+        attachTouch(btn,
+            () => { btn.classList.add('active'); packet[byteIdx] |= bitMask; },
+            null,
+            () => { btn.classList.remove('active'); packet[byteIdx] &= ~bitMask; }
+        );
+    }
+    bindMom('btnStartD1', 3, 0x01);
+    bindMom('btnMotionD8', 2, 0x80);
+    bindMom('btnRpmPlus', 2, 0x02);
+    bindMom('btnRpmMinus', 2, 0x04);
+    bindMom('btnGSS', 3, 0x10); // GSS 비상정지
+    bindMom('btnHorn', 2, 0x20);
+    bindMom('btnJump', 2, 0x40);
+    bindMom('btnHoseOpen', 3, 0x40);
+    bindMom('btnHoseClose', 3, 0x80);
+
+    // --- BOOM / OUT 토글 ---
     const btnBoom = document.getElementById('btnBoom');
     const btnOut = document.getElementById('btnOut');
-
-    btnBoom.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        btnBoom.classList.add('active');
-        btnOut.classList.remove('active');
-        packet[3] |= 0x02;
-        packet[3] &= ~0x20;
+    attachTouch(btnBoom, () => {
+        btnBoom.classList.add('active'); btnOut.classList.remove('active');
+        packet[3] = (packet[3] & ~0x20) | 0x02;
+    });
+    attachTouch(btnOut, () => {
+        btnOut.classList.add('active'); btnBoom.classList.remove('active');
+        packet[3] = (packet[3] & ~0x02) | 0x20;
     });
 
-    btnOut.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        btnOut.classList.add('active');
-        btnBoom.classList.remove('active');
-        packet[3] |= 0x20;
-        packet[3] &= ~0x02;
-    });
-
-    // --- PUMP 정전/역전 토글 버튼 ---
+    // --- PUMP 정전 / 역전 토글 ---
     const btnPumpFwd = document.getElementById('btnPumpFwd');
     const btnPumpRev = document.getElementById('btnPumpRev');
-
-    btnPumpFwd.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (btnPumpFwd.classList.contains('active')) {
-            btnPumpFwd.classList.remove('active');
-            packet[2] &= ~0x08;
+    attachTouch(btnPumpFwd, () => {
+        if(btnPumpFwd.classList.contains('active')) {
+            btnPumpFwd.classList.remove('active'); packet[2] &= ~0x08;
         } else {
-            btnPumpFwd.classList.add('active');
-            btnPumpRev.classList.remove('active');
-            packet[2] |= 0x08;
-            packet[2] &= ~0x10;
+            btnPumpFwd.classList.add('active'); btnPumpRev.classList.remove('active');
+            packet[2] = (packet[2] & ~0x10) | 0x08;
         }
     });
-
-    btnPumpRev.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (btnPumpRev.classList.contains('active')) {
-            btnPumpRev.classList.remove('active');
-            packet[2] &= ~0x10;
+    attachTouch(btnPumpRev, () => {
+        if(btnPumpRev.classList.contains('active')) {
+            btnPumpRev.classList.remove('active'); packet[2] &= ~0x10;
         } else {
-            btnPumpRev.classList.add('active');
-            btnPumpFwd.classList.remove('active');
-            packet[2] |= 0x10;
-            packet[2] &= ~0x08;
+            btnPumpRev.classList.add('active'); btnPumpFwd.classList.remove('active');
+            packet[2] = (packet[2] & ~0x08) | 0x10;
         }
     });
 </script>
