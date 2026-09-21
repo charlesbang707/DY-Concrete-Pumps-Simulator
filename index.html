@@ -66,6 +66,7 @@
             justify-content: center;
             letter-spacing: 2px;
             box-shadow: 0 0 10px rgba(255, 149, 0, 0.4);
+            cursor: pointer;
         }
         .btn-d8-motion.active {
             background: #cc7700;
@@ -313,6 +314,7 @@
         </div>
     </div>
 
+    <!-- 우측 MOTION CONTROL (D8) 패널 원상 복구 -->
     <div class="side-panel">
         <button class="btn-d8-motion" id="btnMotionD8">MOTION CONTROL (D8)</button>
     </div>
@@ -325,7 +327,7 @@
     let bleDevice = null;
     let gattCharacteristic = null;
     let isConnected = false;
-    let isSending = false; // Bluefy GATT 락 방지용 플래그
+    let isSending = false;
 
     const encoder = new TextEncoder();
 
@@ -353,10 +355,10 @@
             gattCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
             isConnected = true;
-            statusDiv.innerText = "연결됨 (50ms)";
+            statusDiv.innerText = "연결됨 (80ms)";
             statusDiv.className = "status-text connected";
 
-            // 송신 루프 시작
+            // 전송 루프 시작
             sendLoop();
 
             bleDevice.addEventListener('gattserverdisconnected', () => {
@@ -369,12 +371,11 @@
         }
     }
 
-    // iOS Bluefy 비동기 GATT 락 방지 송신 루프 (권장 주기 50ms)
+    // 80ms 주기 안전 전송 루프
     async function sendLoop() {
         while (isConnected && gattCharacteristic) {
             const startTime = Date.now();
 
-            // 이전 전송이 완료되지 않은 경우 중복 호출을 건너뛰어 BLE 드라이버 Deadlock 방지
             if (!isSending) {
                 isSending = true;
                 try {
@@ -388,20 +389,20 @@
                     const dataBuffer = encoder.encode(hexStr);
                     await gattCharacteristic.writeValueWithoutResponse(dataBuffer);
                 } catch (e) {
-                    console.error("BLE 송신 에러 (스킵됨):", e);
+                    console.error("BLE 송신 에러:", e);
                 } finally {
                     isSending = false;
                 }
             }
 
             const elapsed = Date.now() - startTime;
-            // Target interval = 50ms (iOS BLE 한계 안정 지점)
-            const delay = Math.max(0, 50 - elapsed);
+            // Target interval = 80ms (iOS Bluefy 검증 주기)
+            const delay = Math.max(0, 80 - elapsed);
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
 
-    // --- 조이스틱 및 컨트롤 레이아웃 바인딩 ---
+    // --- 조이스틱 제어 로직 ---
     function setupLeftJoystick() {
         const area = document.getElementById('areaLeft');
         const stick = document.getElementById('stickLeft');
@@ -503,6 +504,7 @@
     setupLeftJoystick();
     setupRightJoystick();
 
+    // --- 슬라이더 바인딩 ---
     function setupSlider(sliderId, labelId, title, packetIdx, bitUpShift, bitDownShift) {
         const slider = document.getElementById(sliderId);
         const label = document.getElementById(labelId);
@@ -536,6 +538,7 @@
     setupSlider('sliderA5', 'lblA5', '3붐 제어 (L2)', 8, 4, 4);
     setupSlider('sliderA6', 'lblA6', '2붐 제어 (R2)', 9, 5, 5);
 
+    // --- 노브 바인딩 ---
     const knobA8 = document.getElementById('knobA8');
     const ptrA8 = document.getElementById('ptrA8');
     const valA8 = document.getElementById('valA8');
@@ -557,6 +560,7 @@
         ptrA8.style.transform = `rotate(${-135 + (newVal / 255) * 270}deg)`;
     });
 
+    // --- 모멘터리 버튼 바인딩 ---
     function bindMomentary(btnId, packetIdx, bitShift) {
         const btn = document.getElementById(btnId);
         btn.addEventListener('touchstart', (e) => {
@@ -571,8 +575,8 @@
         });
     }
 
-    bindMomentary('btnStartD1', 3, 0);
-    bindMomentary('btnMotionD8', 2, 7);
+    bindMomentary('btnStartD1', 3, 0);      // AIR CUFF (D1)
+    bindMomentary('btnMotionD8', 2, 7);     // MOTION CONTROL (D8) 복구
     bindMomentary('btnRpmPlus', 2, 1);
     bindMomentary('btnRpmMinus', 2, 2);
     bindMomentary('btnHorn', 2, 5);
@@ -580,6 +584,7 @@
     bindMomentary('btnHoseOpen', 3, 6);
     bindMomentary('btnHoseClose', 3, 7);
 
+    // --- BOOM/OUT 토글 버튼 ---
     const btnBoom = document.getElementById('btnBoom');
     const btnOut = document.getElementById('btnOut');
 
@@ -599,6 +604,7 @@
         packet[3] &= ~0x02;
     });
 
+    // --- PUMP 정전/역전 토글 버튼 ---
     const btnPumpFwd = document.getElementById('btnPumpFwd');
     const btnPumpRev = document.getElementById('btnPumpRev');
 
