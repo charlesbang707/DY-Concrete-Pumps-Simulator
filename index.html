@@ -160,8 +160,8 @@
                 statusText.style.color = "#ffcc00";
 
                 bleDevice = await navigator.bluetooth.requestDevice({
-                    // acceptAllDevices: true 를 쓰거나 아래 filters 를 사용하세요.
-                    filters: [{ namePrefix: 'ESP32' }],
+                    acceptAllDevices: true, //를 쓰거나 아래 filters 를 사용하세요.
+                    //filters: [{ namePrefix: 'ESP32' }],
                     optionalServices: [SERVICE_UUID]
                 });
 
