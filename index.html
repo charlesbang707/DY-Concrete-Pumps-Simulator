@@ -120,19 +120,19 @@
         <div class="joystick-box">
             <div class="joystick-title">좌측 (4붐/5붐)</div>
             <div class="stick-area" id="areaLeft"><div class="stick-knob" id="knobLeft"></div></div>
-            <div class="joystick-values" id="valLeft">X: 128<br>Y: 128</div>
+            <div class="joystick-values" id="valLeft">X: 127<br>Y: 127</div>
         </div>
         <!-- 2. 중앙 조이스틱 (신규 추가) -->
         <div class="joystick-box">
             <div class="joystick-title">중앙 (2붐/3붐)</div>
             <div class="stick-area" id="areaCenter"><div class="stick-knob" id="knobCenter"></div></div>
-            <div class="joystick-values" id="valCenter">2붐(A6): 128<br>3붐(A5): 128</div>
+            <div class="joystick-values" id="valCenter">2붐(A6): 127<br>3붐(A5): 127</div>
         </div>
         <!-- 3. 우측 조이스틱 -->
         <div class="joystick-box">
             <div class="joystick-title">우측 (스윙/1붐)</div>
             <div class="stick-area" id="areaRight"><div class="stick-knob" id="knobRight"></div></div>
-            <div class="joystick-values" id="valRight">X: 128<br>Y: 128</div>
+            <div class="joystick-values" id="valRight">X: 127<br>Y: 127</div>
         </div>
     </div>
 
@@ -141,7 +141,7 @@
         <button class="side-btn" id="btnStart">START</button>
         
         <div class="btn-group">
-            <button class="btn active" id="btnBoom">BOOM</button>
+            <button class="btn" id="btnBoom">BOOM</button>
             <button class="btn" id="btnOut">OUT</button>
         </div>
         <div class="btn-group">
@@ -167,7 +167,7 @@
             <button class="btn" id="btnJump">JUMP</button>
         </div>
         <div class="btn-group">
-            <button class="btn active" id="btnPumpFwd">정전</button>
+            <button class="btn" id="btnPumpFwd">정전</button>
             <button class="btn" id="btnPumpRev">역전</button>
         </div>
 
@@ -198,16 +198,14 @@
         let txCount = 0;
 
         // 12-byte packet:
-        // [0..3] = switch bits, [4..11] = joystick/dial values
+        // [0..3] = 스위치 바이트 (초기값: 00 00 00 00 - 안전 중립)
+        // [4..9] = 조이스틱 (초기값: 127 / 0x7F)
+        // [10..11] = 다이얼 (초기값: 128)
         const packet = new Uint8Array(12);
-        packet.fill(0);
-        packet.fill(128, 4, 12);
-
-        // Initial state:
-        // packet[2] (3번 바이트): 정전 (0x08)
-        // packet[3] (4번 바이트): BOOM (0x02)
-        packet[2] = 0x08;
-        packet[3] = 0x02;
+        packet.fill(0);          // 스위치 0x00 초기화
+        packet.fill(127, 4, 10); // 조이스틱 중립값 127(0x7F) 설정
+        packet[10] = 128;
+        packet[11] = 128;
 
         const $ = (id) => document.getElementById(id);
 
@@ -249,7 +247,6 @@
                 setStatus("장치 찾는 중...", "#ffcc00");
                 $("connectBtn").disabled = true;
 
-                // Bluefy/iOS에서는 acceptAllDevices + optionalServices 방식 사용
                 bleDevice = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
                     optionalServices: [SERVICE_UUID]
@@ -280,7 +277,6 @@
 
                 stopSending();
 
-                // 연결 직후 한 번 보내고, 이후 정확히 80ms 주기로 전송
                 await sendBLEData();
                 sendTimer = setInterval(() => {
                     sendBLEData();
@@ -306,7 +302,6 @@
                 let sent = false;
                 let lastError = null;
         
-                // WRITE WITH RESPONSE 우선
                 if (props.write &&
                     typeof bleCharacteristic.writeValueWithResponse === "function") {
                     try {
@@ -317,7 +312,6 @@
                     }
                 }
         
-                // WRITE WITHOUT RESPONSE
                 if (!sent &&
                     props.writeWithoutResponse &&
                     typeof bleCharacteristic.writeValueWithoutResponse === "function") {
@@ -329,7 +323,6 @@
                     }
                 }
         
-                // 구형 Web Bluetooth API 대응
                 if (!sent &&
                     typeof bleCharacteristic.writeValue === "function") {
                     try {
@@ -404,8 +397,8 @@
 
                 const nx = dx / RADIUS;
                 const ny = dy / RADIUS;
-                const valX = Math.max(0, Math.min(255, Math.round((nx + 1) * 127.5)));
-                const valY = Math.max(0, Math.min(255, Math.round((ny + 1) * 127.5)));
+                const valX = Math.max(0, Math.min(255, Math.round((nx + 1) * 127)));
+                const valY = Math.max(0, Math.min(255, Math.round((ny + 1) * 127)));
 
                 packet[idxX] = valX;
                 packet[idxY] = valY;
@@ -415,9 +408,9 @@
             function resetStick() {
                 activeTouchId = null;
                 knob.style.transform = "translate(0px, 0px)";
-                packet[idxX] = 128;
-                packet[idxY] = 128;
-                valDisp.innerHTML = `${labelX}: 128<br>${labelY}: 128`;
+                packet[idxX] = 127;
+                packet[idxY] = 127;
+                valDisp.innerHTML = `${labelX}: 127<br>${labelY}: 127`;
             }
 
             area.addEventListener("touchstart", (e) => {
@@ -475,13 +468,6 @@
                 activeTouchId = touch.identifier;
                 startY = touch.clientY;
                 startVal = packet[packetIdx];
-            }, { passive: false });
-
-            container.addEventListener("touchmove", (e) => {
-                e.preventDefault();
-                if (activeTouchId === null) return;
-                const touch = getTouchById(e.touches, activeTouchId);
-                if (touch) updateStick(touch);
             }, { passive: false });
 
             container.addEventListener("touchmove", (e) => {
@@ -574,17 +560,14 @@
 
             if (!fwdBtn || !revBtn) return;
 
-            // 정전 버튼 눌렀을 때
             fwdBtn.addEventListener("touchstart", (e) => {
                 e.preventDefault();
                 const isFwdOn = (packet[BYTE_IDX] & MASK_FWD) !== 0;
 
                 if (isFwdOn) {
-                    // 정전 작동 중 -> 끄기
                     packet[BYTE_IDX] &= ~MASK_FWD;
                     fwdBtn.classList.remove("active");
                 } else {
-                    // 정전 켜기 (역전이 켜져있으면 바로 끄기)
                     packet[BYTE_IDX] &= ~MASK_REV;
                     packet[BYTE_IDX] |= MASK_FWD;
                     revBtn.classList.remove("active");
@@ -593,17 +576,14 @@
                 sendBLEData();
             }, { passive: false });
 
-            // 역전 버튼 눌렀을 때
             revBtn.addEventListener("touchstart", (e) => {
                 e.preventDefault();
                 const isRevOn = (packet[BYTE_IDX] & MASK_REV) !== 0;
 
                 if (isRevOn) {
-                    // 역전 작동 중 -> 끄기
                     packet[BYTE_IDX] &= ~MASK_REV;
                     revBtn.classList.remove("active");
                 } else {
-                    // 역전 켜기 (정전이 켜져있으면 바로 끄기)
                     packet[BYTE_IDX] &= ~MASK_FWD;
                     packet[BYTE_IDX] |= MASK_REV;
                     fwdBtn.classList.remove("active");
