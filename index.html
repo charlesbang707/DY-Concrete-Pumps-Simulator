@@ -203,8 +203,11 @@
         packet.fill(0);
         packet.fill(128, 4, 12);
 
-        // Initial state: BOOM + pump forward
-        packet[3] = 0x02 | 0x08;
+        // Initial state:
+        // packet[2] (3번 바이트): 정전 (0x08)
+        // packet[3] (4번 바이트): BOOM (0x02)
+        packet[2] = 0x08;
+        packet[3] = 0x02;
 
         const $ = (id) => document.getElementById(id);
 
@@ -261,9 +264,6 @@
                 const service = await server.getPrimaryService(SERVICE_UUID);
                 bleCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
-                // 연결 자체와 "쓰기 가능"은 별개입니다.
-                // ESP32 Arduino BLECharacteristic은 보통 PROPERTY_WRITE를 사용하므로
-                // iOS/Bluefy에서는 write-with-response를 우선 사용해야 합니다.
                 const props = bleCharacteristic.properties || {};
                 console.log("BLE characteristic properties:", props);
 
@@ -301,19 +301,14 @@
             isSending = true;
         
             try {
-                // packet 자체가 Uint8Array 12 bytes
-                // ASCII 문자열로 변환하지 않고 RAW BINARY 그대로 전송
                 const data = packet.slice();
-        
                 const props = bleCharacteristic.properties || {};
-        
                 let sent = false;
                 let lastError = null;
         
                 // WRITE WITH RESPONSE 우선
                 if (props.write &&
                     typeof bleCharacteristic.writeValueWithResponse === "function") {
-        
                     try {
                         await bleCharacteristic.writeValueWithResponse(data);
                         sent = true;
@@ -326,7 +321,6 @@
                 if (!sent &&
                     props.writeWithoutResponse &&
                     typeof bleCharacteristic.writeValueWithoutResponse === "function") {
-        
                     try {
                         await bleCharacteristic.writeValueWithoutResponse(data);
                         sent = true;
@@ -338,7 +332,6 @@
                 // 구형 Web Bluetooth API 대응
                 if (!sent &&
                     typeof bleCharacteristic.writeValue === "function") {
-        
                     try {
                         await bleCharacteristic.writeValue(data);
                         sent = true;
@@ -357,7 +350,6 @@
                 txCount++;
                 $("txText").innerText = "TX: " + txCount;
         
-                // 디버깅용
                 console.log(
                     "BLE TX:",
                     Array.from(data)
@@ -366,68 +358,6 @@
                 );
         
             } catch (error) {
-        
-                console.error("BLE 전송 에러:", error);
-        
-                if (bleDevice?.gatt && !bleDevice.gatt.connected) {
-                    handleDisconnected();
-                }
-        
-            } finally {
-                isSending = false;
-            }
-        }
-        /* 
-        async function sendBLEData() {
-            if (!isConnected || !bleCharacteristic || isSending) return;
-
-            isSending = true;
-            try {
-                // 기존 ESP32 프로토콜 유지:
-                // 12바이트를 "00 00 00 0A 80..." 형태의 ASCII HEX + 줄바꿈으로 전송
-                const hexStr =
-                    Array.from(packet)
-                        .map(b => b.toString(16).padStart(2, "0").toUpperCase())
-                        .join(" ") + "\n";
-
-                const data = new TextEncoder().encode(hexStr);
-
-                const props = bleCharacteristic.properties || {};
-                let sent = false;
-                let lastError = null;
-
-                // Bluefy/iOS와 ESP32 BLE 구현의 차이를 고려하여 가능한 WRITE 방식을 순서대로 시도합니다.
-                if (typeof bleCharacteristic.writeValueWithResponse === "function") {
-                    try {
-                        await bleCharacteristic.writeValueWithResponse(data);
-                        sent = true;
-                    } catch (e) { lastError = e; }
-                }
-
-                if (!sent && props.write && typeof bleCharacteristic.writeValue === "function") {
-                    try {
-                        await bleCharacteristic.writeValue(data);
-                        sent = true;
-                    } catch (e) { lastError = e; }
-                }
-
-                if (!sent && typeof bleCharacteristic.writeValueWithoutResponse === "function") {
-                    try {
-                        await bleCharacteristic.writeValueWithoutResponse(data);
-                        sent = true;
-                    } catch (e) { lastError = e; }
-                }
-
-                if (!sent) {
-                    throw new Error("BLE 데이터 쓰기 실패. properties=" + JSON.stringify(props) +
-                                    ", error=" + (lastError?.message || lastError || "unknown"));
-                }
-
-                txCount++;
-                $("txText").innerText = "TX: " + txCount;
-                console.log("BLE TX:", hexStr);
-
-            } catch (error) {
                 console.error("BLE 전송 에러:", error);
                 if (bleDevice?.gatt && !bleDevice.gatt.connected) {
                     handleDisconnected();
@@ -436,16 +366,13 @@
                 isSending = false;
             }
         }
-        */
 
-        
         // ---------- JOYSTICKS ----------
         function initJoystick(areaId, knobId, valId, labelX, labelY, idxX, idxY) {
             const area = $(areaId);
             const knob = $(knobId);
             const valDisp = $(valId);
 
-            // 120px 원 + 45px knob
             const RADIUS = 37.5;
             let activeTouchId = null;
 
@@ -554,6 +481,13 @@
                 e.preventDefault();
                 if (activeTouchId === null) return;
                 const touch = getTouchById(e.touches, activeTouchId);
+                if (touch) updateStick(touch);
+            }, { passive: false });
+
+            container.addEventListener("touchmove", (e) => {
+                e.preventDefault();
+                if (activeTouchId === null) return;
+                const touch = getTouchById(e.touches, activeTouchId);
                 if (!touch) return;
 
                 const dy = startY - touch.clientY;
@@ -602,12 +536,10 @@
             btn.addEventListener("touchcancel", release, { passive: false });
         }
 
-        // BOOM/OUT 및 정전/역전은 서로 배타적인 선택 스위치
+        // ---------- BOOM / OUT (4번 바이트: 0x02 / 0x20 배타적 선택) ----------
         const EXCLUSIVE_MASKS = {
-            btnBoom:    0x02,
-            btnOut:     0x04,
-            btnPumpFwd: 0x08,
-            btnPumpRev: 0x20
+            btnBoom: 0x02,
+            btnOut:  0x20
         };
 
         function addExclusiveButton(id, byteIdx, bitMask, groupIds) {
@@ -629,10 +561,59 @@
             }, { passive: false });
         }
 
-        addExclusiveButton("btnBoom",    3, 0x02, ["btnBoom", "btnOut"]);
-        addExclusiveButton("btnOut",     3, 0x04, ["btnBoom", "btnOut"]);
-        addExclusiveButton("btnPumpFwd", 3, 0x08, ["btnPumpFwd", "btnPumpRev"]);
-        addExclusiveButton("btnPumpRev", 3, 0x20, ["btnPumpFwd", "btnPumpRev"]);
+        addExclusiveButton("btnBoom", 3, 0x02, ["btnBoom", "btnOut"]);
+        addExclusiveButton("btnOut",  3, 0x20, ["btnBoom", "btnOut"]);
+
+        // ---------- 정전 / 역전 (3번 바이트: 0x08 / 0x10 토글 및 즉시 전환) ----------
+        function setupPumpButtons() {
+            const fwdBtn = $("btnPumpFwd");
+            const revBtn = $("btnPumpRev");
+            const BYTE_IDX = 2; // 3번 바이트 (0-based index: 2)
+            const MASK_FWD = 0x08; // 정전: 0x08
+            const MASK_REV = 0x10; // 역전: 0x10
+
+            if (!fwdBtn || !revBtn) return;
+
+            // 정전 버튼 눌렀을 때
+            fwdBtn.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                const isFwdOn = (packet[BYTE_IDX] & MASK_FWD) !== 0;
+
+                if (isFwdOn) {
+                    // 정전 작동 중 -> 끄기
+                    packet[BYTE_IDX] &= ~MASK_FWD;
+                    fwdBtn.classList.remove("active");
+                } else {
+                    // 정전 켜기 (역전이 켜져있으면 바로 끄기)
+                    packet[BYTE_IDX] &= ~MASK_REV;
+                    packet[BYTE_IDX] |= MASK_FWD;
+                    revBtn.classList.remove("active");
+                    fwdBtn.classList.add("active");
+                }
+                sendBLEData();
+            }, { passive: false });
+
+            // 역전 버튼 눌렀을 때
+            revBtn.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                const isRevOn = (packet[BYTE_IDX] & MASK_REV) !== 0;
+
+                if (isRevOn) {
+                    // 역전 작동 중 -> 끄기
+                    packet[BYTE_IDX] &= ~MASK_REV;
+                    revBtn.classList.remove("active");
+                } else {
+                    // 역전 켜기 (정전이 켜져있으면 바로 끄기)
+                    packet[BYTE_IDX] &= ~MASK_FWD;
+                    packet[BYTE_IDX] |= MASK_REV;
+                    fwdBtn.classList.remove("active");
+                    revBtn.classList.add("active");
+                }
+                sendBLEData();
+            }, { passive: false });
+        }
+
+        setupPumpButtons();
 
         // Momentary switches
         addMomentaryButton("btnStart",     3, 0x01);
