@@ -110,6 +110,7 @@
     <div class="header">
         <div class="status" id="statusText">BLE 미연결</div>
         <!-- 연결 버튼 -->
+        <div id="txText" style="color:#aaa;font-size:12px;margin-left:auto;margin-right:10px;">TX: 0</div>
         <button class="btn-connect" id="connectBtn">ESP32 연결하기</button>
     </div>
 
@@ -194,6 +195,7 @@
         let sendTimer = null;
         let isConnected = false;
         let isSending = false;
+        let txCount = 0;
 
         // 12-byte packet:
         // [0..3] = switch bits, [4..11] = joystick/dial values
@@ -259,13 +261,30 @@
                 const service = await server.getPrimaryService(SERVICE_UUID);
                 bleCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
+                // 연결 자체와 "쓰기 가능"은 별개입니다.
+                // ESP32 Arduino BLECharacteristic은 보통 PROPERTY_WRITE를 사용하므로
+                // iOS/Bluefy에서는 write-with-response를 우선 사용해야 합니다.
+                const props = bleCharacteristic.properties || {};
+                console.log("BLE characteristic properties:", props);
+
+                if (!props.write && !props.writeWithoutResponse) {
+                    throw new Error("이 BLE characteristic은 WRITE 권한이 없습니다.");
+                }
+
                 isConnected = true;
-                setStatus("연결됨 (80ms)", "#30d158");
+                txCount = 0;
+                $("txText").innerText = "TX: 0";
+                const writeMode = props.write ? "WRITE" : "WRITE_NO_RESPONSE";
+                setStatus("연결됨 (80ms / " + writeMode + ")", "#30d158");
                 $("connectBtn").innerText = "연결 해제";
 
                 stopSending();
-                sendBLEData();                 // 연결 즉시 1회 전송
-                sendTimer = setInterval(sendBLEData, 80);
+
+                // 연결 직후 한 번 보내고, 이후 정확히 80ms 주기로 전송
+                await sendBLEData();
+                sendTimer = setInterval(() => {
+                    sendBLEData();
+                }, 80);
 
             } catch (error) {
                 console.error("BLE 연결 실패:", error);
@@ -290,14 +309,40 @@
 
                 const data = new TextEncoder().encode(hexStr);
 
-                // Bluefy/iOS 버전에 따라 두 API 중 하나만 제공될 수 있음
-                if (typeof bleCharacteristic.writeValueWithoutResponse === "function") {
-                    await bleCharacteristic.writeValueWithoutResponse(data);
-                } else if (typeof bleCharacteristic.writeValue === "function") {
-                    await bleCharacteristic.writeValue(data);
-                } else {
-                    throw new Error("쓰기 가능한 BLE characteristic API가 없습니다.");
+                const props = bleCharacteristic.properties || {};
+                let sent = false;
+                let lastError = null;
+
+                // Bluefy/iOS와 ESP32 BLE 구현의 차이를 고려하여 가능한 WRITE 방식을 순서대로 시도합니다.
+                if (typeof bleCharacteristic.writeValueWithResponse === "function") {
+                    try {
+                        await bleCharacteristic.writeValueWithResponse(data);
+                        sent = true;
+                    } catch (e) { lastError = e; }
                 }
+
+                if (!sent && props.write && typeof bleCharacteristic.writeValue === "function") {
+                    try {
+                        await bleCharacteristic.writeValue(data);
+                        sent = true;
+                    } catch (e) { lastError = e; }
+                }
+
+                if (!sent && typeof bleCharacteristic.writeValueWithoutResponse === "function") {
+                    try {
+                        await bleCharacteristic.writeValueWithoutResponse(data);
+                        sent = true;
+                    } catch (e) { lastError = e; }
+                }
+
+                if (!sent) {
+                    throw new Error("BLE 데이터 쓰기 실패. properties=" + JSON.stringify(props) +
+                                    ", error=" + (lastError?.message || lastError || "unknown"));
+                }
+
+                txCount++;
+                $("txText").innerText = "TX: " + txCount;
+                console.log("BLE TX:", hexStr);
 
             } catch (error) {
                 console.error("BLE 전송 에러:", error);
@@ -457,12 +502,14 @@
                 e.preventDefault();
                 btn.classList.add("active");
                 packet[byteIdx] |= bitMask;
+                sendBLEData();
             };
 
             const release = (e) => {
                 e.preventDefault();
                 btn.classList.remove("active");
                 packet[byteIdx] &= (~bitMask & 0xFF);
+                sendBLEData();
             };
 
             btn.addEventListener("touchstart", press, { passive: false });
@@ -493,6 +540,7 @@
 
                 packet[byteIdx] |= bitMask;
                 btn.classList.add("active");
+                sendBLEData();
             }, { passive: false });
         }
 
