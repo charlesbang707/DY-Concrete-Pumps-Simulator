@@ -297,6 +297,89 @@
 
         async function sendBLEData() {
             if (!isConnected || !bleCharacteristic || isSending) return;
+        
+            isSending = true;
+        
+            try {
+                // packet 자체가 Uint8Array 12 bytes
+                // ASCII 문자열로 변환하지 않고 RAW BINARY 그대로 전송
+                const data = packet.slice();
+        
+                const props = bleCharacteristic.properties || {};
+        
+                let sent = false;
+                let lastError = null;
+        
+                // WRITE WITH RESPONSE 우선
+                if (props.write &&
+                    typeof bleCharacteristic.writeValueWithResponse === "function") {
+        
+                    try {
+                        await bleCharacteristic.writeValueWithResponse(data);
+                        sent = true;
+                    } catch (e) {
+                        lastError = e;
+                    }
+                }
+        
+                // WRITE WITHOUT RESPONSE
+                if (!sent &&
+                    props.writeWithoutResponse &&
+                    typeof bleCharacteristic.writeValueWithoutResponse === "function") {
+        
+                    try {
+                        await bleCharacteristic.writeValueWithoutResponse(data);
+                        sent = true;
+                    } catch (e) {
+                        lastError = e;
+                    }
+                }
+        
+                // 구형 Web Bluetooth API 대응
+                if (!sent &&
+                    typeof bleCharacteristic.writeValue === "function") {
+        
+                    try {
+                        await bleCharacteristic.writeValue(data);
+                        sent = true;
+                    } catch (e) {
+                        lastError = e;
+                    }
+                }
+        
+                if (!sent) {
+                    throw new Error(
+                        "BLE 데이터 쓰기 실패: " +
+                        (lastError?.message || lastError || "unknown")
+                    );
+                }
+        
+                txCount++;
+                $("txText").innerText = "TX: " + txCount;
+        
+                // 디버깅용
+                console.log(
+                    "BLE TX:",
+                    Array.from(data)
+                        .map(b => b.toString(16).padStart(2, "0").toUpperCase())
+                        .join(" ")
+                );
+        
+            } catch (error) {
+        
+                console.error("BLE 전송 에러:", error);
+        
+                if (bleDevice?.gatt && !bleDevice.gatt.connected) {
+                    handleDisconnected();
+                }
+        
+            } finally {
+                isSending = false;
+            }
+        }
+        /* 
+        async function sendBLEData() {
+            if (!isConnected || !bleCharacteristic || isSending) return;
 
             isSending = true;
             try {
@@ -353,7 +436,9 @@
                 isSending = false;
             }
         }
+        */
 
+        
         // ---------- JOYSTICKS ----------
         function initJoystick(areaId, knobId, valId, labelX, labelY, idxX, idxY) {
             const area = $(areaId);
