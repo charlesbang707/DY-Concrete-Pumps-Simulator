@@ -28,7 +28,6 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
-        /* 메인 레이아웃 (우측 D8 버튼을 위한 2컬럼 구성) */
         .app-root {
             display: flex;
             width: 100%;
@@ -46,9 +45,8 @@
             min-width: 0;
         }
 
-        /* D8 MOVEMENT 사이드 바 버튼 */
         .side-panel {
-            width: 48px;
+            width: 52px;
             display: flex;
             flex-direction: column;
         }
@@ -75,7 +73,6 @@
             transform: scale(0.97);
         }
 
-        /* 1. 헤더 바 */
         .header-bar {
             display: flex;
             justify-content: space-between;
@@ -123,7 +120,6 @@
             color: white;
         }
 
-        /* 2. 조이스틱 영역 */
         .joystick-section {
             display: flex;
             gap: 8px;
@@ -178,7 +174,6 @@
         .slider-label { font-size: 10px; color: #ffd60a; margin-bottom: 2px; }
         .custom-slider { width: 100%; height: 16px; accent-color: #ffd60a; }
 
-        /* 3. 하단 제어 패널 */
         .control-panel {
             flex: 0.9;
             min-height: 0;
@@ -218,19 +213,6 @@
             box-shadow: 0 0 8px rgba(10, 132, 255, 0.6);
         }
 
-        .btn-gss {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #ff453a 0%, #ff3b30 100%);
-            color: white;
-            font-weight: bold;
-            font-size: 12px;
-            border: 2px solid #ffffff;
-            box-shadow: 0 0 10px rgba(255, 69, 58, 0.6);
-        }
-        .btn-gss.active { transform: scale(0.92); box-shadow: 0 0 18px rgba(255, 69, 58, 1); }
-
         .knob-container {
             width: 34px;
             height: 34px;
@@ -263,30 +245,30 @@
         <div class="header-bar">
             <div id="status" class="status-text">BLE 미연결</div>
             <div class="header-actions">
-                <button class="btn-start-d1" id="btnStartD1">START (D1)</button>
+                <button class="btn-start-d1" id="btnStartD1">AIR CUFF (D1)</button>
                 <button class="btn-connect" onclick="connectBLE()">ESP32 연결하기</button>
             </div>
         </div>
 
         <div class="joystick-section">
             <div class="joystick-card">
-                <div class="card-title">좌측 조이스틱 (4붐/5붐)</div>
+                <div class="card-title">좌측 조이스틱 (L3/L2)</div>
                 <div class="stick-area" id="areaLeft">
                     <div class="stick-handle" id="stickLeft"></div>
                 </div>
                 <div class="slider-box">
-                    <div class="slider-label" id="lblA5">3붐 회전 (A5): 128</div>
+                    <div class="slider-label" id="lblA5">3붐 제어 (L2): 128</div>
                     <input type="range" id="sliderA5" class="custom-slider" min="0" max="255" value="128">
                 </div>
             </div>
 
             <div class="joystick-card">
-                <div class="card-title">우측 조이스틱 (스윙/1붐)</div>
+                <div class="card-title">우측 조이스틱 (R3/R2)</div>
                 <div class="stick-area" id="areaRight">
                     <div class="stick-handle" id="stickRight"></div>
                 </div>
                 <div class="slider-box">
-                    <div class="slider-label" id="lblA6">2붐 회전 (A6): 128</div>
+                    <div class="slider-label" id="lblA6">2붐 제어 (R2): 128</div>
                     <input type="range" id="sliderA6" class="custom-slider" min="0" max="255" value="128">
                 </div>
             </div>
@@ -306,29 +288,21 @@
             </div>
 
             <div class="group-box">
-                <div class="group-title">토출량(A8)</div>
+                <div class="group-title">토출량</div>
                 <div class="knob-container" id="knobA8"><div class="knob-pointer" id="ptrA8"></div></div>
                 <div class="knob-val" id="valA8">128</div>
             </div>
 
-            <button class="btn-gss" id="btnGSS">GSS</button>
-
             <div class="group-box">
-                <div class="group-title">HORN/JUMP</div>
+                <div class="group-title">기능</div>
                 <button class="btn-ctrl" id="btnHorn">HORN</button>
-                <button class="btn-ctrl" id="btnJump">JUMP</button>
+                <button class="btn-ctrl" id="btnStroke">행정변환</button>
             </div>
 
             <div class="group-box">
                 <div class="group-title">PUMP</div>
                 <button class="btn-ctrl" id="btnPumpFwd">정전</button>
                 <button class="btn-ctrl" id="btnPumpRev">역전</button>
-            </div>
-
-            <div class="group-box">
-                <div class="group-title">BOOM SPD</div>
-                <div class="knob-container" id="knobSpd"><div class="knob-pointer" id="ptrSpd"></div></div>
-                <div class="knob-val" id="valSpd">128</div>
             </div>
 
             <div class="group-box">
@@ -339,9 +313,8 @@
         </div>
     </div>
 
-    <!-- 우측 D8 MOVEMENT 스위치 영역 -->
     <div class="side-panel">
-        <button class="btn-d8-motion" id="btnMotionD8">MOTION (D8)</button>
+        <button class="btn-d8-motion" id="btnMotionD8">MOTION CONTROL (D8)</button>
     </div>
 </div>
 
@@ -354,10 +327,15 @@
     let sendIntervalTimer = null;
     let isSending = false;
 
-    // 12바이트 TPDO 데이터 구조 (Byte 0 ~ Byte 11)
+    // 12바이트 TPDO 데이터 구조 (Byte 1 ~ Byte 12 -> packet[0] ~ packet[11])
     let packet = new Uint8Array(12);
+    packet[0] = 0x00; // Byte 1 (TPDO1 Byte 1)
+    packet[1] = 0x00; // Byte 2 (TPDO1 Byte 2)
+    packet[2] = 0x00; // Byte 3 (TPDO1 Byte 3)
+    packet[3] = 0x02; // Byte 4 (TPDO1 Byte 4) -> 기본값을 BOOM 모드(0x02)로 설정
+    
+    // Byte 5 ~ 12 (TPDO2 / TPDO3 - 아날로그 중립 128 = 0x80)
     packet.fill(128, 4, 12);
-    packet[0] = 0; packet[1] = 0; packet[2] = 0; packet[3] = 0;
 
     async function connectBLE() {
         try {
@@ -374,7 +352,7 @@
             const service = await server.getPrimaryService(SERVICE_UUID);
             gattCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
-            statusDiv.innerText = "WROVER 연결됨";
+            statusDiv.innerText = "연결됨 (40ms)";
             statusDiv.className = "status-text connected";
 
             startSendingLoop();
@@ -391,6 +369,7 @@
 
     function startSendingLoop() {
         if (sendIntervalTimer) clearInterval(sendIntervalTimer);
+        // 40ms 주기 전송
         sendIntervalTimer = setInterval(async () => {
             if (!gattCharacteristic || isSending) return;
             try {
@@ -401,7 +380,7 @@
             } finally {
                 isSending = false;
             }
-        }, 80);
+        }, 40);
     }
 
     function stopSendingLoop() {
@@ -411,36 +390,51 @@
         }
     }
 
-    // --- 조이스틱 제어 ---
-    function setupJoystick(areaId, stickId, axisXIndex, axisYIndex) {
-        const area = document.getElementById(areaId);
-        const stick = document.getElementById(stickId);
+    // --- 좌측 조이스틱 (L3: Byte 5/6 - 5붐, 4붐) ---
+    function setupLeftJoystick() {
+        const area = document.getElementById('areaLeft');
+        const stick = document.getElementById('stickLeft');
         const maxRadius = 24;
 
         function updateStick(e) {
             const touch = e.touches[0];
             const rect = area.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
+            const deltaX = touch.clientX - (rect.left + rect.width / 2);
+            const deltaY = touch.clientY - (rect.top + rect.height / 2);
+            const dist = Math.hypot(deltaX, deltaY);
 
-            let deltaX = touch.clientX - centerX;
-            let deltaY = touch.clientY - centerY;
-            let distance = Math.hypot(deltaX, deltaY);
-
-            if (distance > maxRadius) {
-                deltaX = (deltaX / distance) * maxRadius;
-                deltaY = (deltaY / distance) * maxRadius;
+            let normX = deltaX / maxRadius;
+            let normY = deltaY / maxRadius;
+            if (dist > maxRadius) {
+                normX /= (dist / maxRadius);
+                normY /= (dist / maxRadius);
             }
 
-            stick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-            packet[axisXIndex] = Math.round(((deltaX / maxRadius) + 1) * 127.5);
-            packet[axisYIndex] = Math.round(((deltaY / maxRadius) + 1) * 127.5);
+            stick.style.transform = `translate(${normX * maxRadius}px, ${normY * maxRadius}px)`;
+
+            const valX = Math.round((normX + 1) * 127.5); // 4붐
+            const valY = Math.round((normY + 1) * 127.5); // 5붐
+
+            packet[5] = valX; // Byte 6 (TPDO2 Byte 6)
+            packet[4] = valY; // Byte 5 (TPDO2 Byte 5)
+
+            // 5붐 상/하 (Byte 1: Bit 0=상승(0x01), Byte 2: Bit 0=하강(0x01))
+            if (valY < 80) { packet[0] |= 0x01; packet[1] &= ~0x01; }
+            else if (valY > 175) { packet[1] |= 0x01; packet[0] &= ~0x01; }
+            else { packet[0] &= ~0x01; packet[1] &= ~0x01; }
+
+            // 4붐 상/하 (Byte 1: Bit 1=상승(0x02), Byte 2: Bit 1=하강(0x02))
+            if (valX > 175) { packet[0] |= 0x02; packet[1] &= ~0x02; }
+            else if (valX < 80) { packet[1] |= 0x02; packet[0] &= ~0x02; }
+            else { packet[0] &= ~0x02; packet[1] &= ~0x02; }
         }
 
         function resetStick() {
             stick.style.transform = `translate(0px, 0px)`;
-            packet[axisXIndex] = 128;
-            packet[axisYIndex] = 128;
+            packet[4] = 128; // Byte 5
+            packet[5] = 128; // Byte 6
+            packet[0] &= ~0x03; // Byte 1 비트 해제
+            packet[1] &= ~0x03; // Byte 2 비트 해제
         }
 
         area.addEventListener('touchstart', (e) => { e.preventDefault(); updateStick(e); });
@@ -448,86 +442,152 @@
         area.addEventListener('touchend', (e) => { e.preventDefault(); resetStick(); });
     }
 
-    setupJoystick('areaLeft', 'stickLeft', 5, 4);
-    setupJoystick('areaRight', 'stickRight', 7, 6);
+    // --- 우측 조이스틱 (R3: Byte 7/8 - 1붐, 회전) ---
+    function setupRightJoystick() {
+        const area = document.getElementById('areaRight');
+        const stick = document.getElementById('stickRight');
+        const maxRadius = 24;
 
-    // --- 슬라이더 자동 중립 복귀 ---
-    function setupAutoReturnSlider(sliderId, labelId, labelPrefix, packetIndex) {
+        function updateStick(e) {
+            const touch = e.touches[0];
+            const rect = area.getBoundingClientRect();
+            const deltaX = touch.clientX - (rect.left + rect.width / 2);
+            const deltaY = touch.clientY - (rect.top + rect.height / 2);
+            const dist = Math.hypot(deltaX, deltaY);
+
+            let normX = deltaX / maxRadius;
+            let normY = deltaY / maxRadius;
+            if (dist > maxRadius) {
+                normX /= (dist / maxRadius);
+                normY /= (dist / maxRadius);
+            }
+
+            stick.style.transform = `translate(${normX * maxRadius}px, ${normY * maxRadius}px)`;
+
+            const valX = Math.round((normX + 1) * 127.5); // 회전
+            const valY = Math.round((normY + 1) * 127.5); // 1붐
+
+            packet[7] = valX; // Byte 8 (TPDO2 Byte 8)
+            packet[6] = valY; // Byte 7 (TPDO2 Byte 7)
+
+            // 1붐 상/하 (Byte 1: Bit 2=하강(0x04), Byte 2: Bit 2=상승(0x04))
+            if (valY > 175) { packet[0] |= 0x04; packet[1] &= ~0x04; }
+            else if (valY < 80) { packet[1] |= 0x04; packet[0] &= ~0x04; }
+            else { packet[0] &= ~0x04; packet[1] &= ~0x04; }
+
+            // 좌/우 회전 (Byte 1: Bit 3=우회전(0x08), Byte 2: Bit 3=좌회전(0x08))
+            if (valX > 175) { packet[0] |= 0x08; packet[1] &= ~0x08; }
+            else if (valX < 80) { packet[1] |= 0x08; packet[0] &= ~0x08; }
+            else { packet[0] &= ~0x08; packet[1] &= ~0x08; }
+        }
+
+        function resetStick() {
+            stick.style.transform = `translate(0px, 0px)`;
+            packet[6] = 128; // Byte 7
+            packet[7] = 128; // Byte 8
+            packet[0] &= ~0x0C; // Byte 1 비트 해제
+            packet[1] &= ~0x0C; // Byte 2 비트 해제
+        }
+
+        area.addEventListener('touchstart', (e) => { e.preventDefault(); updateStick(e); });
+        area.addEventListener('touchmove', (e) => { e.preventDefault(); updateStick(e); });
+        area.addEventListener('touchend', (e) => { e.preventDefault(); resetStick(); });
+    }
+
+    setupLeftJoystick();
+    setupRightJoystick();
+
+    // --- 슬라이더 (L2: Byte 9, R2: Byte 10) ---
+    function setupSlider(sliderId, labelId, title, packetIdx, bitUpShift, bitDownShift) {
         const slider = document.getElementById(sliderId);
         const label = document.getElementById(labelId);
 
         function onInput() {
             const val = parseInt(slider.value);
-            label.innerText = `${labelPrefix}: ${val}`;
-            packet[packetIndex] = val;
+            label.innerText = `${title}: ${val}`;
+            packet[packetIdx] = val;
+
+            // Byte 1 / Byte 2 비트 제어
+            if (val > 175) { packet[0] |= (1 << bitUpShift); packet[1] &= ~(1 << bitUpShift); }
+            else if (val < 80) { packet[1] |= (1 << bitDownShift); packet[0] &= ~(1 << bitDownShift); }
+            else { 
+                packet[0] &= ~(1 << bitUpShift); 
+                packet[1] &= ~(1 << bitDownShift); 
+            }
         }
 
-        function resetSlider() {
+        function reset() {
             slider.value = 128;
-            label.innerText = `${labelPrefix}: 128`;
-            packet[packetIndex] = 128;
+            label.innerText = `${title}: 128`;
+            packet[packetIdx] = 128;
+            packet[0] &= ~(1 << bitUpShift);
+            packet[1] &= ~(1 << bitDownShift);
         }
 
         slider.addEventListener('input', onInput);
-        slider.addEventListener('touchend', resetSlider);
-        slider.addEventListener('mouseup', resetSlider);
+        slider.addEventListener('touchend', reset);
+        slider.addEventListener('mouseup', reset);
     }
 
-    setupAutoReturnSlider('sliderA5', 'lblA5', '3붐 회전 (A5)', 8);
-    setupAutoReturnSlider('sliderA6', 'lblA6', '2붐 회전 (A6)', 9);
+    setupSlider('sliderA5', 'lblA5', '3붐 제어 (L2)', 8, 4, 4); // Byte 9, Byte 1/2 Bit 4
+    setupSlider('sliderA6', 'lblA6', '2붐 제어 (R2)', 9, 5, 5); // Byte 10, Byte 1/2 Bit 5
 
-    // --- 노브 드래그 제어 ---
-    function setupKnob(knobId, ptrId, valId, packetIndex) {
-        const knob = document.getElementById(knobId);
-        const ptr = document.getElementById(ptrId);
-        const valTxt = document.getElementById(valId);
-        let startY = 0;
-        let startVal = 128;
+    // --- 토출량 노브 (A8 -> Byte 12 = packet[11]) ---
+    const knobA8 = document.getElementById('knobA8');
+    const ptrA8 = document.getElementById('ptrA8');
+    const valA8 = document.getElementById('valA8');
+    let startY = 0, startVal = 128;
 
-        knob.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            startY = e.touches[0].clientY;
-            startVal = packet[packetIndex];
-        });
+    knobA8.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        startY = e.touches[0].clientY;
+        startVal = packet[11];
+    });
 
-        knob.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            let deltaY = startY - e.touches[0].clientY;
-            let newVal = Math.min(255, Math.max(0, startVal + Math.round(deltaY * 1.5)));
-            
-            packet[packetIndex] = newVal;
-            valTxt.innerText = newVal;
+    knobA8.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        let deltaY = startY - e.touches[0].clientY;
+        let newVal = Math.min(255, Math.max(0, startVal + Math.round(deltaY * 1.5)));
+        
+        packet[11] = newVal; // Byte 12
+        valA8.innerText = newVal;
+        ptrA8.style.transform = `rotate(${-135 + (newVal / 255) * 270}deg)`;
+    });
 
-            let deg = -135 + (newVal / 255) * 270;
-            ptr.style.transform = `rotate(${deg}deg)`;
-        });
-    }
-
-    setupKnob('knobA8', 'ptrA8', 'valA8', 10);
-    setupKnob('knobSpd', 'ptrSpd', 'valSpd', 11);
-
-    // --- 순간작동(Momentary) 버튼 핸들러 ---
-    function bindMomentaryBtn(btnId, bitByte, bitShift) {
+    // --- 순간작동 버튼 바인딩 함수 ---
+    function bindMomentary(btnId, packetIdx, bitShift) {
         const btn = document.getElementById(btnId);
         btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             btn.classList.add('active');
-            packet[bitByte] |= (1 << bitShift);
+            packet[packetIdx] |= (1 << bitShift);
         });
         btn.addEventListener('touchend', (e) => {
             e.preventDefault();
             btn.classList.remove('active');
-            packet[bitByte] &= ~(1 << bitShift);
+            packet[packetIdx] &= ~(1 << bitShift);
         });
     }
 
-    // 신규 D1 (START) 신호 연동 (Byte 2, Bit 0)
-    bindMomentaryBtn('btnStartD1', 2, 0);
+    // Byte 4 (packet[3]): Air Cuff (Bit 0 = 0x01)
+    bindMomentary('btnStartD1', 3, 0);
 
-    // 신규 D8 (MOVEMENT / MOTION) 신호 연동 (Byte 2, Bit 7)
-    bindMomentaryBtn('btnMotionD8', 2, 7);
+    // Byte 3 (packet[2]): Motion Control (Bit 7 = 0x80)
+    bindMomentary('btnMotionD8', 2, 7);
 
-    // BOOM / OUT 모드 선택
+    // Byte 3 (packet[2]): 악셀 상승/하강 (Bit 1 = 0x02, Bit 2 = 0x04)
+    bindMomentary('btnRpmPlus', 2, 1);
+    bindMomentary('btnRpmMinus', 2, 2);
+
+    // Byte 3 (packet[2]): HORN (Bit 5 = 0x20), 행정변환 (Bit 6 = 0x40)
+    bindMomentary('btnHorn', 2, 5);
+    bindMomentary('btnStroke', 2, 6);
+
+    // Byte 4 (packet[3]): E/H Open (Bit 6 = 0x40), E/H Close (Bit 7 = 0x80)
+    bindMomentary('btnHoseOpen', 3, 6);
+    bindMomentary('btnHoseClose', 3, 7);
+
+    // --- BOOM / OUT (아우트리거) 모드 선택 (Byte 4 = packet[3]) ---
     const btnBoom = document.getElementById('btnBoom');
     const btnOut = document.getElementById('btnOut');
 
@@ -535,17 +595,19 @@
         e.preventDefault();
         btnBoom.classList.add('active');
         btnOut.classList.remove('active');
-        packet[0] &= ~(1 << 0);
+        packet[3] |= 0x02;  // Byte 4, Bit 1 (0x02) = 붐
+        packet[3] &= ~0x20; // Byte 4, Bit 5 (0x20) = 아우트리거 해제
     });
 
     btnOut.addEventListener('touchstart', (e) => {
         e.preventDefault();
         btnOut.classList.add('active');
         btnBoom.classList.remove('active');
-        packet[0] |= (1 << 0);
+        packet[3] |= 0x20;  // Byte 4, Bit 5 (0x20) = 아우트리거
+        packet[3] &= ~0x02; // Byte 4, Bit 1 (0x02) = 붐 해제
     });
 
-    // PUMP 정전/역전/중립 토글 (Byte 2)
+    // --- PUMP 정전/역전 선택 (Byte 3 = packet[2]) ---
     const btnPumpFwd = document.getElementById('btnPumpFwd');
     const btnPumpRev = document.getElementById('btnPumpRev');
 
@@ -553,12 +615,12 @@
         e.preventDefault();
         if (btnPumpFwd.classList.contains('active')) {
             btnPumpFwd.classList.remove('active');
-            packet[2] &= ~(1 << 1);
+            packet[2] &= ~0x08; // 펌핑 정전 해제
         } else {
             btnPumpFwd.classList.add('active');
             btnPumpRev.classList.remove('active');
-            packet[2] |= (1 << 1);
-            packet[2] &= ~(1 << 2);
+            packet[2] |= 0x08;  // Byte 3, Bit 3 (0x08) = 펌핑 정전
+            packet[2] &= ~0x10; // Byte 3, Bit 4 (0x10) = 펌핑 역전 해제
         }
     });
 
@@ -566,23 +628,14 @@
         e.preventDefault();
         if (btnPumpRev.classList.contains('active')) {
             btnPumpRev.classList.remove('active');
-            packet[2] &= ~(1 << 2);
+            packet[2] &= ~0x10; // 펌핑 역전 해제
         } else {
             btnPumpRev.classList.add('active');
             btnPumpFwd.classList.remove('active');
-            packet[2] |= (1 << 2);
-            packet[2] &= ~(1 << 1);
+            packet[2] |= 0x10;  // Byte 3, Bit 4 (0x10) = 펌핑 역전
+            packet[2] &= ~0x08; // Byte 3, Bit 3 (0x08) = 펌핑 정전 해제
         }
     });
-
-    // 기타 순간작동 버튼
-    bindMomentaryBtn('btnGSS', 2, 5);       // GSS 비상정지
-    bindMomentaryBtn('btnRpmPlus', 3, 3);   // RPM +
-    bindMomentaryBtn('btnRpmMinus', 3, 4);  // RPM -
-    bindMomentaryBtn('btnHorn', 3, 1);      // HORN
-    bindMomentaryBtn('btnJump', 3, 5);      // JUMP
-    bindMomentaryBtn('btnHoseOpen', 1, 1);  // END HOSE OPEN
-    bindMomentaryBtn('btnHoseClose', 1, 2); // END HOSE CLOSE
 </script>
 
 </body>
