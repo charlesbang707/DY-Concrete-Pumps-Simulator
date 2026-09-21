@@ -324,18 +324,17 @@
 
     let bleDevice = null;
     let gattCharacteristic = null;
-    let sendIntervalTimer = null;
-    let isSending = false;
+    let isConnected = false;
 
     const encoder = new TextEncoder();
 
-    // 12바이트 데이터 구조
+    // 12바이트 원본 데이터 패킷
     let packet = new Uint8Array(12);
     packet[0] = 0x00;
     packet[1] = 0x00;
     packet[2] = 0x00;
-    packet[3] = 0x02; // 기본값 BOOM 모드
-    packet.fill(128, 4, 12); // 아날로그 중립값
+    packet[3] = 0x02; // BOOM 기본 모드
+    packet.fill(128, 4, 12); // 아날로그 중립
 
     async function connectBLE() {
         try {
@@ -352,55 +351,47 @@
             const service = await server.getPrimaryService(SERVICE_UUID);
             gattCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
+            isConnected = true;
             statusDiv.innerText = "연결됨 (40ms)";
             statusDiv.className = "status-text connected";
 
-            startSendingLoop();
+            // 전송 루프 시작
+            sendLoop();
 
             bleDevice.addEventListener('gattserverdisconnected', () => {
+                isConnected = false;
                 statusDiv.innerText = "BLE 연결 끊김";
                 statusDiv.className = "status-text";
-                stopSendingLoop();
             });
         } catch (error) {
             alert("BLE 연결 실패: " + error);
         }
     }
 
-    function startSendingLoop() {
-        if (sendIntervalTimer) clearInterval(sendIntervalTimer);
-        
-        sendIntervalTimer = setInterval(async () => {
-            if (!gattCharacteristic || isSending) return;
+    // iOS Bluefy 호환성을 위해 setInterval 대신 비동기 루프 적용
+    async function sendLoop() {
+        while (isConnected && gattCharacteristic) {
+            const startTime = Date.now();
             try {
-                isSending = true;
-
-                // 12바이트 배열을 스페이스로 구분된 ASCII HEX 문자열로 생성
-                // 예시: "00 00 00 02 80 80 80 80 80 80 80 80\n"
-                let asciiStr = "";
+                // 바이트별 2자리 HEX 변환 + 스페이스 구분 문자열 생성
+                // 결과 예시: "00 00 00 02 80 80 80 80 80 80 80 80\n"
+                let hexStr = "";
                 for (let i = 0; i < packet.length; i++) {
-                    asciiStr += packet[i].toString(16).padStart(2, '0').toUpperCase();
-                    if (i < packet.length - 1) {
-                        asciiStr += " "; // 바이트 간 공백 삽입
-                    }
+                    const hex = packet[i].toString(16).padStart(2, '0').toUpperCase();
+                    hexStr += (i === 0) ? hex : (" " + hex);
                 }
-                asciiStr += "\n"; // 줄바꿈 추가 (시리얼 개행 구분용)
+                hexStr += "\n"; // 개행 추가
 
-                // ASCII 문자열을 바이트 바이트 데이터(Uint8Array)로 인코딩하여 전송
-                const encodedData = encoder.encode(asciiStr);
-                await gattCharacteristic.writeValueWithoutResponse(encodedData);
+                const dataBuffer = encoder.encode(hexStr);
+                await gattCharacteristic.writeValueWithoutResponse(dataBuffer);
             } catch (e) {
-                console.error("전송 에러:", e);
-            } finally {
-                isSending = false;
+                console.error("BLE 송신 에러:", e);
             }
-        }, 40);
-    }
 
-    function stopSendingLoop() {
-        if (sendIntervalTimer) {
-            clearInterval(sendIntervalTimer);
-            sendIntervalTimer = null;
+            // 40ms 주기를 유지하도록 소요 시간을 감안하여 대기
+            const elapsed = Date.now() - startTime;
+            const delay = Math.max(0, 40 - elapsed);
+            await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
 
