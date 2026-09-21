@@ -68,10 +68,11 @@
         .side-btn { 
             writing-mode: vertical-rl; text-orientation: upright; font-weight: bold; font-size: 14px; letter-spacing: 2px;
             background-color: #34c759; color: #000; border: none; border-radius: 5px; height: 90%; width: 45px; 
-            touch-action: none; transition: background-color 0.1s ease;
+            touch-action: none; transition: background-color 0.15s ease, box-shadow 0.15s ease;
         }
         .side-btn.yellow { background-color: #ffcc00; }
-        /* MOTION 버튼 누름 작동 시 초록색 적용 */
+        
+        /* MOTION 토글 활성화 시 녹색 및 조명 효과 적용 */
         .side-btn.active, .side-btn.yellow.active { 
             background-color: #30d158 !important; 
             box-shadow: 0 0 12px rgba(48, 209, 88, 0.8);
@@ -251,7 +252,6 @@
 
                 stopSending();
 
-                // 80ms 주기 타이머 시작
                 sendTimer = setInterval(() => {
                     sendBLEData();
                 }, 80);
@@ -294,7 +294,7 @@
             }
         }
 
-        // ---------- JOYSTICKS (축 반전 기능 추가) ----------
+        // ---------- JOYSTICKS ----------
         function initJoystick(areaId, knobId, valId, labelX, labelY, idxX, idxY, invX = false, invY = false) {
             const area = $(areaId);
             const knob = $(knobId);
@@ -332,7 +332,6 @@
                 let nx = dx / RADIUS;
                 let ny = dy / RADIUS;
 
-                // 축 반전 처리
                 if (invX) nx = -nx;
                 if (invY) ny = -ny;
 
@@ -383,8 +382,8 @@
         initJoystick("areaLeft",   "knobLeft",   "valLeft",   "X",       "Y",       5, 4, false, true);
         // 중앙 (정상)
         initJoystick("areaCenter", "knobCenter", "valCenter", "2붐(A6)", "3붐(A5)", 9, 8, false, false);
-        // 우측 (상하/좌우 모두 반전)
-        initJoystick("areaRight",  "knobRight",  "valRight",  "X",       "Y",       7, 6, true, true);
+        // 우측 (스윙 X축 정상 원복, 1붐 Y축 상하 반전 유지)
+        initJoystick("areaRight",  "knobRight",  "valRight",  "X",       "Y",       7, 6, false, true);
 
         // ---------- DIALS ----------
         function initDial(containerId, ptrId, valId, packetIdx) {
@@ -462,7 +461,26 @@
             }, { passive: false });
         }
 
-        // ---------- TOGGLE PAIRS ----------
+        // ---------- SINGLE TOGGLE BUTTON (MOTION 전용) ----------
+        function setupSingleToggleButton(id, byteIdx, bitMask) {
+            const btn = $(id);
+            if (!btn) return;
+
+            btn.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                const isOn = (packet[byteIdx] & bitMask) !== 0;
+
+                if (isOn) {
+                    packet[byteIdx] &= (~bitMask & 0xFF);
+                    btn.classList.remove("active"); // 노란색으로 원복
+                } else {
+                    packet[byteIdx] |= bitMask;
+                    btn.classList.add("active");    // 녹색으로 변경 및 유지
+                }
+            }, { passive: false });
+        }
+
+        // ---------- TOGGLE PAIRS (상호 배타적 토글) ----------
         function setupToggleExclusivePair(btn1Id, btn2Id, byteIdx, mask1, mask2) {
             const btn1 = $(btn1Id);
             const btn2 = $(btn2Id);
@@ -505,9 +523,11 @@
         // 정전 / 역전 토글 (재터치 시 OFF)
         setupToggleExclusivePair("btnPumpFwd", "btnPumpRev", 2, 0x08, 0x10);
 
+        // MOTION 단독 토글 스위치 (ON: 녹색, OFF: 노란색)
+        setupSingleToggleButton("btnMotion", 2, 0x80);
+
         // Momentary switches
         addMomentaryButton("btnStart",     3, 0x01);
-        addMomentaryButton("btnMotion",    2, 0x80); // MOTION 스위치 (누를 때 active 클래스 추가됨)
         addMomentaryButton("btnRpmUp",     2, 0x02);
         addMomentaryButton("btnRpmDn",     2, 0x04);
         addMomentaryButton("btnGSS",       3, 0x10);
