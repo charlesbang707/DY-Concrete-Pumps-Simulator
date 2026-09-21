@@ -72,8 +72,6 @@
             cursor: pointer;
         }
         .side-btn.yellow { background-color: #ffcc00; }
-        
-        /* MOTION 눌렀을 때(active) 녹색 변경 및 조명 효과 */
         .side-btn.yellow.active { 
             background-color: #30d158 !important; 
             box-shadow: 0 0 12px rgba(48, 209, 88, 0.8);
@@ -89,10 +87,10 @@
         }
         .btn-gss.active { background-color: #d70015; border-color: #ff9f0a; }
 
-        .dial-container { display: flex; flex-direction: column; align-items: center; touch-action: none; }
+        .dial-container { display: flex; flex-direction: column; align-items: center; touch-action: none; cursor: pointer; }
         .dial-title { font-size: 10px; color: #aaa; margin-bottom: 5px; }
         .dial { width: 50px; height: 50px; border-radius: 50%; border: 3px solid #ffcc00; position: relative; background: #111; }
-        .dial-ptr { width: 3px; height: 20px; background: #ffcc00; position: absolute; top: 3px; left: 22px; transform-origin: bottom center; transform: rotate(-135deg); }
+        .dial-ptr { width: 3px; height: 20px; background: #ffcc00; position: absolute; top: 3px; left: 22px; transform-origin: bottom center; transform: rotate(0deg); }
         .dial-val { color: #ffcc00; margin-top: 5px; font-size: 12px; font-weight:bold; }
     </style>
 </head>
@@ -386,7 +384,7 @@
         // 우측 (스윙 X축 정상, 1붐 Y축 상하 반전)
         initJoystick("areaRight",  "knobRight",  "valRight",  "X",       "Y",       7, 6, false, true);
 
-        // ---------- DIALS ----------
+        // ---------- DIALS (상하 드래그 조작 로직 수정 완료) ----------
         function initDial(containerId, ptrId, valId, packetIdx) {
             const container = $(containerId);
             const ptr = $(ptrId);
@@ -402,6 +400,21 @@
                 return null;
             }
 
+            function updateDial(touch) {
+                if (!touch) return;
+                // 위로 올리면 증가(+), 아래로 내리면 감소(-)
+                const deltaY = startY - touch.clientY; 
+                let newVal = startVal + Math.round(deltaY * 1.5); // 이동 감도
+                newVal = Math.max(0, Math.min(255, newVal));
+
+                packet[packetIdx] = newVal;
+
+                // 다이얼 바늘 회전 (-135도 ~ +135도)
+                const angle = -135 + (newVal / 255) * 270;
+                ptr.style.transform = `rotate(${angle}deg)`;
+                valDisp.innerText = newVal;
+            }
+
             container.addEventListener("touchstart", (e) => {
                 e.preventDefault();
                 const touch = e.changedTouches[0];
@@ -415,7 +428,7 @@
                 e.preventDefault();
                 if (activeTouchId === null) return;
                 const touch = getTouchById(e.touches, activeTouchId);
-                if (touch) updateStick(touch);
+                if (touch) updateDial(touch);
             }, { passive: false });
 
             container.addEventListener("touchend", (e) => {
@@ -428,8 +441,8 @@
             });
         }
 
-        initDial("dialA8", "ptrA8", "valA8", 11); // 토출량
-        initDial("dialA7", "ptrA7", "valA7", 10); // BOOM SPD
+        initDial("dialA8", "ptrA8", "valA8", 11); // 토출량 (packet[11])
+        initDial("dialA7", "ptrA7", "valA7", 10); // BOOM SPD (packet[10])
 
         // ---------- MOMENTARY BUTTONS ----------
         function addMomentaryButton(id, byteIdx, bitMask) {
@@ -457,7 +470,7 @@
             btn.addEventListener("mouseleave", release);
         }
 
-        // ---------- TOGGLE PAIRS (상호 배타적 토글) ----------
+        // ---------- TOGGLE PAIRS ----------
         function setupToggleExclusivePair(btn1Id, btn2Id, byteIdx, mask1, mask2) {
             const btn1 = $(btn1Id);
             const btn2 = $(btn2Id);
@@ -494,14 +507,14 @@
             }, { passive: false });
         }
 
-        // BOOM / OUT 토글 (재터치 시 OFF)
+        // BOOM / OUT 토글
         setupToggleExclusivePair("btnBoom", "btnOut", 3, 0x02, 0x20);
 
-        // 정전 / 역전 토글 (재터치 시 OFF)
+        // 정전 / 역전 토글
         setupToggleExclusivePair("btnPumpFwd", "btnPumpRev", 2, 0x08, 0x10);
 
-        // Momentary switches (누르고 있는 동안만 동작, MOTION 포함)
-        addMomentaryButton("btnMotion",    2, 0x80); // 누르면 녹색 + ON, 떼면 노란색 + OFF
+        // Momentary switches
+        addMomentaryButton("btnMotion",    2, 0x80);
         addMomentaryButton("btnStart",     3, 0x01);
         addMomentaryButton("btnRpmUp",     2, 0x02);
         addMomentaryButton("btnRpmDn",     2, 0x04);
