@@ -28,14 +28,51 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
-        .app-container {
+        /* 메인 레이아웃 (우측 D8 버튼을 위한 2컬럼 구성) */
+        .app-root {
             display: flex;
-            flex-direction: column;
             width: 100%;
             height: 100%;
-            padding: calc(4px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+            padding: calc(4px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
             box-sizing: border-box;
+            gap: 8px;
+        }
+
+        .main-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
             gap: 6px;
+            min-width: 0;
+        }
+
+        /* D8 MOVEMENT 사이드 바 버튼 */
+        .side-panel {
+            width: 48px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .btn-d8-motion {
+            flex: 1;
+            background: #ff9500;
+            color: #ffffff;
+            border: 2px solid #ffcc00;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 13px;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 2px;
+            box-shadow: 0 0 10px rgba(255, 149, 0, 0.4);
+        }
+        .btn-d8-motion.active {
+            background: #cc7700;
+            box-shadow: 0 0 16px rgba(255, 204, 0, 0.8);
+            transform: scale(0.97);
         }
 
         /* 1. 헤더 바 */
@@ -46,8 +83,14 @@
             height: 32px;
             background: #1e1e22;
             border-radius: 6px;
-            padding: 0 12px;
+            padding: 0 10px;
             flex-shrink: 0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
 
         .status-text { font-weight: bold; font-size: 12px; color: #ff453a; }
@@ -62,6 +105,22 @@
             font-weight: bold;
             font-size: 11px;
             cursor: pointer;
+        }
+
+        .btn-start-d1 {
+            background-color: #30d158;
+            color: black;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 11px;
+            cursor: pointer;
+            box-shadow: 0 0 6px rgba(48, 209, 88, 0.5);
+        }
+        .btn-start-d1.active {
+            background-color: #248a3d;
+            color: white;
         }
 
         /* 2. 조이스틱 영역 */
@@ -87,8 +146,8 @@
         .card-title { font-size: 11px; color: #0a84ff; font-weight: bold; }
 
         .stick-area {
-            width: 86px;
-            height: 86px;
+            width: 84px;
+            height: 84px;
             border-radius: 50%;
             background: #282830;
             border: 2px solid #3a3a45;
@@ -99,8 +158,8 @@
         }
 
         .stick-handle {
-            width: 36px;
-            height: 36px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             background: radial-gradient(circle, #e5e5ea 0%, #8e8e93 100%);
             border: 2px solid #ffffff;
@@ -142,7 +201,7 @@
         .group-title { font-size: 9px; color: #8e8e93; font-weight: bold; }
 
         .btn-ctrl {
-            width: 44px;
+            width: 42px;
             height: 28px;
             background: #2c2c32;
             color: #ccc;
@@ -160,21 +219,21 @@
         }
 
         .btn-gss {
-            width: 52px;
-            height: 52px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             background: radial-gradient(circle, #ff453a 0%, #ff3b30 100%);
             color: white;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 12px;
             border: 2px solid #ffffff;
             box-shadow: 0 0 10px rgba(255, 69, 58, 0.6);
         }
         .btn-gss.active { transform: scale(0.92); box-shadow: 0 0 18px rgba(255, 69, 58, 1); }
 
         .knob-container {
-            width: 36px;
-            height: 36px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             border: 2px solid #ffd60a;
             display: flex;
@@ -186,7 +245,7 @@
         }
         .knob-pointer {
             width: 2px;
-            height: 14px;
+            height: 13px;
             background: #ffd60a;
             position: absolute;
             top: 2px;
@@ -199,83 +258,90 @@
 </head>
 <body>
 
-<div class="app-container">
-    <div class="header-bar">
-        <div id="status" class="status-text">BLE 미연결</div>
-        <button class="btn-connect" onclick="connectBLE()">ESP32 연결하기</button>
+<div class="app-root">
+    <div class="main-panel">
+        <div class="header-bar">
+            <div id="status" class="status-text">BLE 미연결</div>
+            <div class="header-actions">
+                <button class="btn-start-d1" id="btnStartD1">START (D1)</button>
+                <button class="btn-connect" onclick="connectBLE()">ESP32 연결하기</button>
+            </div>
+        </div>
+
+        <div class="joystick-section">
+            <div class="joystick-card">
+                <div class="card-title">좌측 조이스틱 (4붐/5붐)</div>
+                <div class="stick-area" id="areaLeft">
+                    <div class="stick-handle" id="stickLeft"></div>
+                </div>
+                <div class="slider-box">
+                    <div class="slider-label" id="lblA5">3붐 회전 (A5): 128</div>
+                    <input type="range" id="sliderA5" class="custom-slider" min="0" max="255" value="128">
+                </div>
+            </div>
+
+            <div class="joystick-card">
+                <div class="card-title">우측 조이스틱 (스윙/1붐)</div>
+                <div class="stick-area" id="areaRight">
+                    <div class="stick-handle" id="stickRight"></div>
+                </div>
+                <div class="slider-box">
+                    <div class="slider-label" id="lblA6">2붐 회전 (A6): 128</div>
+                    <input type="range" id="sliderA6" class="custom-slider" min="0" max="255" value="128">
+                </div>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <div class="group-box">
+                <div class="group-title">BOOM/OUT</div>
+                <button class="btn-ctrl active" id="btnBoom">BOOM</button>
+                <button class="btn-ctrl" id="btnOut">OUT</button>
+            </div>
+
+            <div class="group-box">
+                <div class="group-title">RPM</div>
+                <button class="btn-ctrl" id="btnRpmPlus">+ RPM</button>
+                <button class="btn-ctrl" id="btnRpmMinus">- RPM</button>
+            </div>
+
+            <div class="group-box">
+                <div class="group-title">토출량(A8)</div>
+                <div class="knob-container" id="knobA8"><div class="knob-pointer" id="ptrA8"></div></div>
+                <div class="knob-val" id="valA8">128</div>
+            </div>
+
+            <button class="btn-gss" id="btnGSS">GSS</button>
+
+            <div class="group-box">
+                <div class="group-title">HORN/JUMP</div>
+                <button class="btn-ctrl" id="btnHorn">HORN</button>
+                <button class="btn-ctrl" id="btnJump">JUMP</button>
+            </div>
+
+            <div class="group-box">
+                <div class="group-title">PUMP</div>
+                <button class="btn-ctrl" id="btnPumpFwd">정전</button>
+                <button class="btn-ctrl" id="btnPumpRev">역전</button>
+            </div>
+
+            <div class="group-box">
+                <div class="group-title">BOOM SPD</div>
+                <div class="knob-container" id="knobSpd"><div class="knob-pointer" id="ptrSpd"></div></div>
+                <div class="knob-val" id="valSpd">128</div>
+            </div>
+
+            <div class="group-box">
+                <div class="group-title">END HOSE</div>
+                <button class="btn-ctrl" id="btnHoseOpen">OPEN</button>
+                <button class="btn-ctrl" id="btnHoseClose">CLOSE</button>
+            </div>
+        </div>
     </div>
 
-    <div class="joystick-section">
-        <!-- 좌측 조이스틱 -->
-        <div class="joystick-card">
-            <div class="card-title">좌측 조이스틱 (4붐/5붐)</div>
-            <div class="stick-area" id="areaLeft">
-                <div class="stick-handle" id="stickLeft"></div>
-            </div>
-            <div class="slider-box">
-                <div class="slider-label" id="lblA5">3붐 회전 (A5): 128</div>
-                <input type="range" id="sliderA5" class="custom-slider" min="0" max="255" value="128">
-            </div>
-        </div>
-
-        <!-- 우측 조이스틱 -->
-        <div class="joystick-card">
-            <div class="card-title">우측 조이스틱 (스윙/1붐)</div>
-            <div class="stick-area" id="areaRight">
-                <div class="stick-handle" id="stickRight"></div>
-            </div>
-            <div class="slider-box">
-                <div class="slider-label" id="lblA6">2붐 회전 (A6): 128</div>
-                <input type="range" id="sliderA6" class="custom-slider" min="0" max="255" value="128">
-            </div>
-        </div>
-    </div>
-
-    <div class="control-panel">
-        <div class="group-box">
-            <div class="group-title">BOOM/OUT</div>
-            <button class="btn-ctrl active" id="btnBoom">BOOM</button>
-            <button class="btn-ctrl" id="btnOut">OUT</button>
-        </div>
-
-        <div class="group-box">
-            <div class="group-title">RPM</div>
-            <button class="btn-ctrl" id="btnRpmPlus">+ RPM</button>
-            <button class="btn-ctrl" id="btnRpmMinus">- RPM</button>
-        </div>
-
-        <div class="group-box">
-            <div class="group-title">토출량(A8)</div>
-            <div class="knob-container" id="knobA8"><div class="knob-pointer" id="ptrA8"></div></div>
-            <div class="knob-val" id="valA8">128</div>
-        </div>
-
-        <button class="btn-gss" id="btnGSS">GSS</button>
-
-        <div class="group-box">
-            <div class="group-title">HORN/JUMP</div>
-            <button class="btn-ctrl" id="btnHorn">HORN</button>
-            <button class="btn-ctrl" id="btnJump">JUMP</button>
-        </div>
-
-        <!-- PUMP (정전 / 역전 / 중립) 토글 -->
-        <div class="group-box">
-            <div class="group-title">PUMP</div>
-            <button class="btn-ctrl" id="btnPumpFwd">정전</button>
-            <button class="btn-ctrl" id="btnPumpRev">역전</button>
-        </div>
-
-        <div class="group-box">
-            <div class="group-title">BOOM SPD</div>
-            <div class="knob-container" id="knobSpd"><div class="knob-pointer" id="ptrSpd"></div></div>
-            <div class="knob-val" id="valSpd">128</div>
-        </div>
-
-        <div class="group-box">
-            <div class="group-title">END HOSE</div>
-            <button class="btn-ctrl" id="btnHoseOpen">OPEN</button>
-            <button class="btn-ctrl" id="btnHoseClose">CLOSE</button>
-        </div>
+    <!-- 우측 D8 MOVEMENT 스위치 영역 -->
+    <div class="side-panel">
+        <button class="btn-d8-motion" id="btnMotionD8">MOTION (D8)</button>
     </div>
 </div>
 
@@ -288,9 +354,9 @@
     let sendIntervalTimer = null;
     let isSending = false;
 
-    // 12바이트 TPDO 데이터 구조
+    // 12바이트 TPDO 데이터 구조 (Byte 0 ~ Byte 11)
     let packet = new Uint8Array(12);
-    packet.fill(128, 4, 12); // 아날로그 축 128 (중립)
+    packet.fill(128, 4, 12);
     packet[0] = 0; packet[1] = 0; packet[2] = 0; packet[3] = 0;
 
     async function connectBLE() {
@@ -311,7 +377,6 @@
             statusDiv.innerText = "WROVER 연결됨";
             statusDiv.className = "status-text connected";
 
-            // 80ms 주기적 연속 전송 시작
             startSendingLoop();
 
             bleDevice.addEventListener('gattserverdisconnected', () => {
@@ -324,7 +389,6 @@
         }
     }
 
-    // 80ms 타임슬롯 연속 패킷 전송 함수
     function startSendingLoop() {
         if (sendIntervalTimer) clearInterval(sendIntervalTimer);
         sendIntervalTimer = setInterval(async () => {
@@ -337,7 +401,7 @@
             } finally {
                 isSending = false;
             }
-        }, 80); // 80ms 주기 전송
+        }, 80);
     }
 
     function stopSendingLoop() {
@@ -347,15 +411,15 @@
         }
     }
 
-    // --- 1. 가로모드 좌표 완전 보정 조이스틱 ---
+    // --- 조이스틱 제어 ---
     function setupJoystick(areaId, stickId, axisXIndex, axisYIndex) {
         const area = document.getElementById(areaId);
         const stick = document.getElementById(stickId);
-        const maxRadius = 25;
+        const maxRadius = 24;
 
         function updateStick(e) {
             const touch = e.touches[0];
-            const rect = area.getBoundingClientRect(); // 실시간 가로/세로 영역 계산
+            const rect = area.getBoundingClientRect();
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
 
@@ -384,10 +448,10 @@
         area.addEventListener('touchend', (e) => { e.preventDefault(); resetStick(); });
     }
 
-    setupJoystick('areaLeft', 'stickLeft', 5, 4);   // 4붐/5붐
-    setupJoystick('areaRight', 'stickRight', 7, 6); // 스윙/1붐
+    setupJoystick('areaLeft', 'stickLeft', 5, 4);
+    setupJoystick('areaRight', 'stickRight', 7, 6);
 
-    // --- 2. 슬라이더 자동 중립 복귀 ---
+    // --- 슬라이더 자동 중립 복귀 ---
     function setupAutoReturnSlider(sliderId, labelId, labelPrefix, packetIndex) {
         const slider = document.getElementById(sliderId);
         const label = document.getElementById(labelId);
@@ -412,7 +476,7 @@
     setupAutoReturnSlider('sliderA5', 'lblA5', '3붐 회전 (A5)', 8);
     setupAutoReturnSlider('sliderA6', 'lblA6', '2붐 회전 (A6)', 9);
 
-    // --- 3. 노브 (토출량 & BOOM SPD) ---
+    // --- 노브 드래그 제어 ---
     function setupKnob(knobId, ptrId, valId, packetIndex) {
         const knob = document.getElementById(knobId);
         const ptr = document.getElementById(ptrId);
@@ -442,7 +506,7 @@
     setupKnob('knobA8', 'ptrA8', 'valA8', 10);
     setupKnob('knobSpd', 'ptrSpd', 'valSpd', 11);
 
-    // --- 4. 버튼 이벤트 (Momentary 및 3단 토클 PUMP) ---
+    // --- 순간작동(Momentary) 버튼 핸들러 ---
     function bindMomentaryBtn(btnId, bitByte, bitShift) {
         const btn = document.getElementById(btnId);
         btn.addEventListener('touchstart', (e) => {
@@ -456,6 +520,12 @@
             packet[bitByte] &= ~(1 << bitShift);
         });
     }
+
+    // 신규 D1 (START) 신호 연동 (Byte 2, Bit 0)
+    bindMomentaryBtn('btnStartD1', 2, 0);
+
+    // 신규 D8 (MOVEMENT / MOTION) 신호 연동 (Byte 2, Bit 7)
+    bindMomentaryBtn('btnMotionD8', 2, 7);
 
     // BOOM / OUT 모드 선택
     const btnBoom = document.getElementById('btnBoom');
@@ -475,18 +545,16 @@
         packet[0] |= (1 << 0);
     });
 
-    // PUMP 정전/역전/중립 3단 토글 스위치 (Byte 2)
+    // PUMP 정전/역전/중립 토글 (Byte 2)
     const btnPumpFwd = document.getElementById('btnPumpFwd');
     const btnPumpRev = document.getElementById('btnPumpRev');
 
     btnPumpFwd.addEventListener('touchstart', (e) => {
         e.preventDefault();
         if (btnPumpFwd.classList.contains('active')) {
-            // 정전 OFF -> 중립
             btnPumpFwd.classList.remove('active');
             packet[2] &= ~(1 << 1);
         } else {
-            // 정전 ON
             btnPumpFwd.classList.add('active');
             btnPumpRev.classList.remove('active');
             packet[2] |= (1 << 1);
@@ -497,11 +565,9 @@
     btnPumpRev.addEventListener('touchstart', (e) => {
         e.preventDefault();
         if (btnPumpRev.classList.contains('active')) {
-            // 역전 OFF -> 중립
             btnPumpRev.classList.remove('active');
             packet[2] &= ~(1 << 2);
         } else {
-            // 역전 ON
             btnPumpRev.classList.add('active');
             btnPumpFwd.classList.remove('active');
             packet[2] |= (1 << 2);
@@ -509,7 +575,7 @@
         }
     });
 
-    // 순간작동 버튼
+    // 기타 순간작동 버튼
     bindMomentaryBtn('btnGSS', 2, 5);       // GSS 비상정지
     bindMomentaryBtn('btnRpmPlus', 3, 3);   // RPM +
     bindMomentaryBtn('btnRpmMinus', 3, 4);  // RPM -
