@@ -11,7 +11,7 @@
             width: 100vw; height: 100vh;
             background-color: #121212; color: #fff; font-family: sans-serif;
             overflow: hidden; touch-action: none; display: flex; flex-direction: column;
-            padding: 5px 25px; /* 양쪽에 25px 여유 공간 추가 */
+            padding: 5px 25px;
         }
 
         /* 상단 상태 바 */
@@ -23,7 +23,7 @@
         .status { color: #ff453a; font-weight: bold; font-size: 1.1rem; }
         .btn-connect { background-color: #007aff; color: white; border: none; padding: 8px 16px; border-radius: 5px; font-weight: bold; cursor: pointer; }
 
-        /* 중앙 조이스틱 영역 (3개 나란히) */
+        /* 중앙 조이스틱 영역 */
         .joystick-container {
             display: flex; justify-content: space-between; align-items: stretch;
             height: 48vh; padding: 10px 0; gap: 15px;
@@ -109,7 +109,6 @@
 
     <div class="header">
         <div class="status" id="statusText">BLE 미연결</div>
-        <!-- 연결 버튼 -->
         <div id="txText" style="color:#aaa;font-size:12px;margin-left:auto;margin-right:10px;">TX: 0</div>
         <button class="btn-connect" id="connectBtn">ESP32 연결하기</button>
     </div>
@@ -122,7 +121,7 @@
             <div class="stick-area" id="areaLeft"><div class="stick-knob" id="knobLeft"></div></div>
             <div class="joystick-values" id="valLeft">X: 127<br>Y: 127</div>
         </div>
-        <!-- 2. 중앙 조이스틱 (신규 추가) -->
+        <!-- 2. 중앙 조이스틱 -->
         <div class="joystick-box">
             <div class="joystick-title">중앙 (2붐/3붐)</div>
             <div class="stick-area" id="areaCenter"><div class="stick-knob" id="knobCenter"></div></div>
@@ -197,12 +196,8 @@
         let isSending = false;
         let txCount = 0;
 
-        // 12-byte packet:
-        // [0..3] = 스위치 바이트 (초기값: 00 00 00 00 - 안전 중립)
-        // [4..9] = 조이스틱 (초기값: 127 / 0x7F)
-        // [10..11] = 다이얼 (초기값: 128)
         const packet = new Uint8Array(12);
-        packet.fill(0);          // 스위치 0x00 초기화
+        packet.fill(0);          // 스위치 0x00 초기화 (00 00 00 00)
         packet.fill(127, 4, 10); // 조이스틱 중립값 127(0x7F) 설정
         packet[10] = 128;
         packet[11] = 128;
@@ -262,7 +257,6 @@
                 bleCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
                 const props = bleCharacteristic.properties || {};
-                console.log("BLE characteristic properties:", props);
 
                 if (!props.write && !props.writeWithoutResponse) {
                     throw new Error("이 BLE characteristic은 WRITE 권한이 없습니다.");
@@ -302,53 +296,33 @@
                 let sent = false;
                 let lastError = null;
         
-                if (props.write &&
-                    typeof bleCharacteristic.writeValueWithResponse === "function") {
+                if (props.write && typeof bleCharacteristic.writeValueWithResponse === "function") {
                     try {
                         await bleCharacteristic.writeValueWithResponse(data);
                         sent = true;
-                    } catch (e) {
-                        lastError = e;
-                    }
+                    } catch (e) { lastError = e; }
                 }
         
-                if (!sent &&
-                    props.writeWithoutResponse &&
-                    typeof bleCharacteristic.writeValueWithoutResponse === "function") {
+                if (!sent && props.writeWithoutResponse && typeof bleCharacteristic.writeValueWithoutResponse === "function") {
                     try {
                         await bleCharacteristic.writeValueWithoutResponse(data);
                         sent = true;
-                    } catch (e) {
-                        lastError = e;
-                    }
+                    } catch (e) { lastError = e; }
                 }
         
-                if (!sent &&
-                    typeof bleCharacteristic.writeValue === "function") {
+                if (!sent && typeof bleCharacteristic.writeValue === "function") {
                     try {
                         await bleCharacteristic.writeValue(data);
                         sent = true;
-                    } catch (e) {
-                        lastError = e;
-                    }
+                    } catch (e) { lastError = e; }
                 }
         
                 if (!sent) {
-                    throw new Error(
-                        "BLE 데이터 쓰기 실패: " +
-                        (lastError?.message || lastError || "unknown")
-                    );
+                    throw new Error("BLE 데이터 쓰기 실패: " + (lastError?.message || lastError || "unknown"));
                 }
         
                 txCount++;
                 $("txText").innerText = "TX: " + txCount;
-        
-                console.log(
-                    "BLE TX:",
-                    Array.from(data)
-                        .map(b => b.toString(16).padStart(2, "0").toUpperCase())
-                        .join(" ")
-                );
         
             } catch (error) {
                 console.error("BLE 전송 에러:", error);
@@ -440,7 +414,6 @@
             }, { passive: false });
         }
 
-        // Packet mapping
         initJoystick("areaLeft",   "knobLeft",   "valLeft",   "X",       "Y",       5, 4);
         initJoystick("areaCenter", "knobCenter", "valCenter", "2붐(A6)", "3붐(A5)", 9, 8);
         initJoystick("areaRight",  "knobRight",  "valRight",  "X",       "Y",       7, 6);
@@ -477,8 +450,7 @@
                 if (!touch) return;
 
                 const dy = startY - touch.clientY;
-                const newVal = Math.min(255, Math.max(0,
-                    startVal + Math.round(dy * 1.5)));
+                const newVal = Math.min(255, Math.max(0, startVal + Math.round(dy * 1.5)));
 
                 packet[packetIdx] = newVal;
                 valDisp.innerText = newVal;
@@ -522,78 +494,50 @@
             btn.addEventListener("touchcancel", release, { passive: false });
         }
 
-        // ---------- BOOM / OUT (4번 바이트: 0x02 / 0x20 배타적 선택) ----------
-        const EXCLUSIVE_MASKS = {
-            btnBoom: 0x02,
-            btnOut:  0x20
-        };
+        // ---------- 토글형 배타적 2버튼 제어 함수 ----------
+        function setupToggleExclusivePair(btn1Id, btn2Id, byteIdx, mask1, mask2) {
+            const btn1 = $(btn1Id);
+            const btn2 = $(btn2Id);
+            if (!btn1 || !btn2) return;
 
-        function addExclusiveButton(id, byteIdx, bitMask, groupIds) {
-            const btn = $(id);
-            if (!btn) return;
-
-            btn.addEventListener("touchstart", (e) => {
+            btn1.addEventListener("touchstart", (e) => {
                 e.preventDefault();
+                const isOn = (packet[byteIdx] & mask1) !== 0;
 
-                groupIds.forEach(groupId => {
-                    $(groupId)?.classList.remove("active");
-                    const mask = EXCLUSIVE_MASKS[groupId];
-                    packet[byteIdx] &= (~mask & 0xFF);
-                });
-
-                packet[byteIdx] |= bitMask;
-                btn.classList.add("active");
-                sendBLEData();
-            }, { passive: false });
-        }
-
-        addExclusiveButton("btnBoom", 3, 0x02, ["btnBoom", "btnOut"]);
-        addExclusiveButton("btnOut",  3, 0x20, ["btnBoom", "btnOut"]);
-
-        // ---------- 정전 / 역전 (3번 바이트: 0x08 / 0x10 토글 및 즉시 전환) ----------
-        function setupPumpButtons() {
-            const fwdBtn = $("btnPumpFwd");
-            const revBtn = $("btnPumpRev");
-            const BYTE_IDX = 2; // 3번 바이트 (0-based index: 2)
-            const MASK_FWD = 0x08; // 정전: 0x08
-            const MASK_REV = 0x10; // 역전: 0x10
-
-            if (!fwdBtn || !revBtn) return;
-
-            fwdBtn.addEventListener("touchstart", (e) => {
-                e.preventDefault();
-                const isFwdOn = (packet[BYTE_IDX] & MASK_FWD) !== 0;
-
-                if (isFwdOn) {
-                    packet[BYTE_IDX] &= ~MASK_FWD;
-                    fwdBtn.classList.remove("active");
+                if (isOn) {
+                    packet[byteIdx] &= ~mask1;
+                    btn1.classList.remove("active");
                 } else {
-                    packet[BYTE_IDX] &= ~MASK_REV;
-                    packet[BYTE_IDX] |= MASK_FWD;
-                    revBtn.classList.remove("active");
-                    fwdBtn.classList.add("active");
+                    packet[byteIdx] &= ~mask2;
+                    packet[byteIdx] |= mask1;
+                    btn2.classList.remove("active");
+                    btn1.classList.add("active");
                 }
                 sendBLEData();
             }, { passive: false });
 
-            revBtn.addEventListener("touchstart", (e) => {
+            btn2.addEventListener("touchstart", (e) => {
                 e.preventDefault();
-                const isRevOn = (packet[BYTE_IDX] & MASK_REV) !== 0;
+                const isOn = (packet[byteIdx] & mask2) !== 0;
 
-                if (isRevOn) {
-                    packet[BYTE_IDX] &= ~MASK_REV;
-                    revBtn.classList.remove("active");
+                if (isOn) {
+                    packet[byteIdx] &= ~mask2;
+                    btn2.classList.remove("active");
                 } else {
-                    packet[BYTE_IDX] &= ~MASK_FWD;
-                    packet[BYTE_IDX] |= MASK_REV;
-                    fwdBtn.classList.remove("active");
-                    revBtn.classList.add("active");
+                    packet[byteIdx] &= ~mask1;
+                    packet[byteIdx] |= mask2;
+                    btn1.classList.remove("active");
+                    btn2.classList.add("active");
                 }
                 sendBLEData();
             }, { passive: false });
         }
 
-        setupPumpButtons();
+        // 1) BOOM / OUT (4번 바이트 / 0-based index: 3): BOOM(0x02), OUT(0x20)
+        setupToggleExclusivePair("btnBoom", "btnOut", 3, 0x02, 0x20);
+
+        // 2) 정전 / 역전 (3번 바이트 / 0-based index: 2): 정전(0x08), 역전(0x10)
+        setupToggleExclusivePair("btnPumpFwd", "btnPumpRev", 2, 0x08, 0x10);
 
         // Momentary switches
         addMomentaryButton("btnStart",     3, 0x01);
@@ -606,7 +550,7 @@
         addMomentaryButton("btnHoseOpen",  3, 0x40);
         addMomentaryButton("btnHoseClose", 3, 0x80);
 
-        // Bluefy/iOS의 페이지 스크롤/브라우저 제스처 방지
+        // Bluefy 터치 스크롤 방지
         document.addEventListener("touchmove", (e) => {
             if (e.target.closest(".btn, .side-btn, .btn-gss, .stick-area, .dial-container")) {
                 e.preventDefault();
