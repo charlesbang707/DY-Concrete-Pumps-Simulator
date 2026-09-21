@@ -11,60 +11,66 @@
             width: 100vw; height: 100vh;
             background-color: #121212; color: #fff; font-family: sans-serif;
             overflow: hidden; touch-action: none; display: flex; flex-direction: column;
+            padding: 5px 25px; /* 양쪽에 25px 여유 공간 추가 */
         }
 
         /* 상단 상태 바 */
         .header {
             display: flex; justify-content: space-between; align-items: center;
-            height: 10vh; padding: 0 15px; background-color: #1a1a1a; border-bottom: 1px solid #333;
+            height: 10vh; background-color: #1a1a1a; border-bottom: 1px solid #333;
+            border-radius: 8px 8px 0 0; padding: 0 15px; margin-top: 5px;
         }
         .status { color: #ff453a; font-weight: bold; font-size: 1.1rem; }
         .btn-connect { background-color: #007aff; color: white; border: none; padding: 8px 16px; border-radius: 5px; font-weight: bold; cursor: pointer; }
 
         /* 중앙 조이스틱 영역 (3개 나란히) */
         .joystick-container {
-            display: flex; justify-content: space-between; align-items: center;
-            height: 50vh; padding: 10px; gap: 10px;
+            display: flex; justify-content: space-between; align-items: stretch;
+            height: 48vh; padding: 10px 0; gap: 15px;
         }
-        .joystick-box {
-            flex: 1; height: 100%; background-color: #1e1e1e; border-radius: 10px; border: 1px solid #333;
-            display: flex; flex-direction: column; align-items: center; position: relative; padding-top: 10px;
-        }
-        .joystick-title { color: #aaa; font-size: 0.85rem; font-weight: bold; margin-bottom: auto; }
-        .joystick-values { position: absolute; bottom: 10px; color: #ffcc00; font-size: 0.8rem; text-align: center; line-height: 1.2; }
         
+        .joystick-box {
+            flex: 1; background-color: #1e1e1e; border-radius: 10px; border: 1px solid #333;
+            display: flex; flex-direction: column; align-items: center; justify-content: space-evenly;
+            padding: 5px;
+        }
+        .joystick-title { color: #aaa; font-size: 0.85rem; font-weight: bold; }
+        .joystick-values { color: #ffcc00; font-size: 0.8rem; text-align: center; line-height: 1.2; font-weight: bold; }
+        
+        /* 조이스틱 동그라미 */
         .stick-area {
-            width: 140px; height: 140px; border-radius: 50%; background-color: #111; border: 2px solid #555;
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            display: flex; justify-content: center; align-items: center; touch-action: none;
+            width: 120px; height: 120px; border-radius: 50%; background-color: #111; border: 2px solid #555;
+            position: relative; display: flex; justify-content: center; align-items: center; touch-action: none;
         }
         .stick-knob {
-            width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle, #ddd, #888);
+            width: 45px; height: 45px; border-radius: 50%; background: radial-gradient(circle, #ddd, #888);
             border: 2px solid #fff; position: absolute; pointer-events: none;
         }
 
         /* 하단 컨트롤 패널 */
         .control-panel {
             display: flex; justify-content: space-between; align-items: center;
-            height: 40vh; padding: 10px; background-color: #151515; border-top: 1px solid #333; gap: 8px;
+            height: 40vh; padding: 10px 15px; background-color: #151515; border-top: 1px solid #333;
+            border-radius: 0 0 8px 8px; gap: 8px; margin-bottom: 5px;
         }
 
         .side-btn { 
             writing-mode: vertical-rl; text-orientation: upright; font-weight: bold; font-size: 14px; letter-spacing: 2px;
             background-color: #34c759; color: #000; border: none; border-radius: 5px; height: 90%; width: 45px; 
+            touch-action: none;
         }
         .side-btn.yellow { background-color: #ffcc00; }
         
         .btn-group { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
-        .btn { background-color: #333; color: white; border: 1px solid #555; padding: 8px 5px; border-radius: 5px; font-size: 11px; font-weight: bold; min-width: 50px; }
+        .btn { background-color: #333; color: white; border: 1px solid #555; padding: 8px 5px; border-radius: 5px; font-size: 11px; font-weight: bold; min-width: 50px; touch-action: none; }
         .btn.active { background-color: #0a84ff; border-color: #64d2ff; }
         
         .btn-gss {
             background-color: #ff453a; border-radius: 50%; width: 70px; height: 70px; 
-            font-size: 18px; font-weight: 900; color: white; border: 4px solid white; box-shadow: 0 0 15px rgba(255,69,58,0.6);
+            font-size: 18px; font-weight: 900; color: white; border: 4px solid white; box-shadow: 0 0 15px rgba(255,69,58,0.6); touch-action: none;
         }
 
-        .dial-container { display: flex; flex-direction: column; align-items: center; }
+        .dial-container { display: flex; flex-direction: column; align-items: center; touch-action: none; }
         .dial-title { font-size: 10px; color: #aaa; margin-bottom: 5px; }
         .dial { width: 50px; height: 50px; border-radius: 50%; border: 3px solid #ffcc00; position: relative; background: #111; }
         .dial-ptr { width: 3px; height: 20px; background: #ffcc00; position: absolute; top: 3px; left: 22px; transform-origin: bottom center; transform: rotate(-135deg); }
@@ -75,6 +81,7 @@
 
     <div class="header">
         <div class="status" id="statusText">BLE 미연결</div>
+        <!-- 연결 버튼 -->
         <button class="btn-connect" id="connectBtn">ESP32 연결하기</button>
     </div>
 
@@ -151,7 +158,6 @@
     </div>
 
     <script>
-        // 기존 펌웨어에 맞춰진 정확한 UUID 복구
         const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
         const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
 
@@ -162,17 +168,15 @@
         let isSending = false;
         const encoder = new TextEncoder();
 
-        // 12바이트 패킷 (조이스틱 3개 포함 4~11번 인덱스는 128로 초기화)
         let packet = new Uint8Array(12);
         packet[0] = 0x00; packet[1] = 0x00; packet[2] = 0x00; packet[3] = 0x02; // BOOM 기본값
         packet.fill(128, 4, 12); 
 
-        // BLE 연결 로직
+        // BLE 연결 이벤트 (전체 화면 차단 코드를 지워서 이제 정상 반응합니다)
         document.getElementById('connectBtn').addEventListener('click', async () => {
             if (isConnected) { bleDevice.gatt.disconnect(); return; }
             try {
                 document.getElementById('statusText').innerText = "장치 찾는 중...";
-                // acceptAllDevices: true 로 복구하여 모든 장치가 다시 검색되도록 함
                 bleDevice = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
                     optionalServices: [SERVICE_UUID]
@@ -187,7 +191,6 @@
                 document.getElementById('statusText').style.color = "#30d158";
                 document.getElementById('connectBtn').innerText = "연결 해제";
                 
-                // 80ms 타이머 시작
                 if (sendInterval) clearInterval(sendInterval);
                 sendInterval = setInterval(sendBLEData, 80);
 
@@ -204,7 +207,6 @@
             }
         });
 
-        // 데이터 전송 로직 (80ms 간격으로 실행됨)
         async function sendBLEData() {
             if (!isConnected || !bleCharacteristic || isSending) return;
             isSending = true;
@@ -218,20 +220,22 @@
             }
         }
 
-        // 터치 바운스/스크롤 원천 차단
-        document.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
-
-        // --- 조이스틱 제어 로직 (3개 공통) ---
+        // --- 조이스틱 제어 로직 (동시 터치 완벽 지원) ---
         function initJoystick(areaId, knobId, valId, labelX, labelY, idxX, idxY) {
             const area = document.getElementById(areaId);
             const knob = document.getElementById(knobId);
             const valDisp = document.getElementById(valId);
-            const maxRadius = 45;
+            const maxRadius = 37.5; // 조이스틱 크기에 맞게 반경 축소
 
-            area.addEventListener('touchmove', (e) => {
+            function updateStick(e) {
+                e.preventDefault(); 
+                // e.touches[0] 대신 e.targetTouches[0]를 사용하여 각각의 조이스틱을 독립적으로 계산 (멀티터치 해결)
+                const touch = e.targetTouches[0];
+                if(!touch) return;
+                
                 const rect = area.getBoundingClientRect();
-                const dx = e.touches[0].clientX - (rect.left + rect.width/2);
-                const dy = e.touches[0].clientY - (rect.top + rect.height/2);
+                const dx = touch.clientX - (rect.left + rect.width / 2);
+                const dy = touch.clientY - (rect.top + rect.height / 2);
                 const dist = Math.hypot(dx, dy);
 
                 let nx = dx / maxRadius, ny = dy / maxRadius;
@@ -243,30 +247,41 @@
                 const valY = Math.round((ny + 1) * 127.5);
                 packet[idxX] = valX; packet[idxY] = valY;
                 valDisp.innerHTML = `${labelX}: ${valX}<br>${labelY}: ${valY}`;
-            }, { passive: false });
+            }
 
-            area.addEventListener('touchend', () => {
+            // 터치 시작과 이동 모두 동일한 로직 적용 (터치 즉시 위치 동기화)
+            area.addEventListener('touchstart', updateStick, { passive: false });
+            area.addEventListener('touchmove', updateStick, { passive: false });
+
+            area.addEventListener('touchend', (e) => {
+                e.preventDefault();
                 knob.style.transform = `translate(0px, 0px)`;
                 packet[idxX] = 128; packet[idxY] = 128;
                 valDisp.innerHTML = `${labelX}: 128<br>${labelY}: 128`;
-            });
+            }, { passive: false });
         }
 
-        // 패킷 인덱스 매핑: 좌측(4붐/5붐), 중앙(2붐/3붐), 우측(스윙/1붐)
+        // 좌, 중, 우 3개 조이스틱 맵핑
         initJoystick('areaLeft', 'knobLeft', 'valLeft', 'X', 'Y', 5, 4);
         initJoystick('areaCenter', 'knobCenter', 'valCenter', '2붐(A6)', '3붐(A5)', 9, 8);
         initJoystick('areaRight', 'knobRight', 'valRight', 'X', 'Y', 7, 6);
 
-        // --- 다이얼 제어 로직 (토출량, BOOM SPD) ---
+        // --- 다이얼 제어 로직 ---
         function initDial(containerId, ptrId, valId, packetIdx) {
             const container = document.getElementById(containerId);
             const ptr = document.getElementById(ptrId);
             const valDisp = document.getElementById(valId);
             let startY = 0, startVal = 128;
 
-            container.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; startVal = packet[packetIdx]; }, {passive:false});
+            container.addEventListener('touchstart', (e) => { 
+                e.preventDefault();
+                startY = e.targetTouches[0].clientY; 
+                startVal = packet[packetIdx]; 
+            }, {passive:false});
+            
             container.addEventListener('touchmove', (e) => {
-                let dy = startY - e.touches[0].clientY;
+                e.preventDefault();
+                let dy = startY - e.targetTouches[0].clientY;
                 let newVal = Math.min(255, Math.max(0, startVal + Math.round(dy * 1.5)));
                 packet[packetIdx] = newVal;
                 valDisp.innerText = newVal;
@@ -276,11 +291,11 @@
         initDial('dialA8', 'ptrA8', 'valA8', 11);
         initDial('dialA7', 'ptrA7', 'valA7', 10);
 
-        // --- 단순 버튼 이벤트 ---
+        // --- 버튼 이벤트 ---
         function bindBtn(id, byteIdx, bitMask) {
             const btn = document.getElementById(id);
-            btn.addEventListener('touchstart', () => { btn.classList.add('active'); packet[byteIdx] |= bitMask; });
-            btn.addEventListener('touchend', () => { btn.classList.remove('active'); packet[byteIdx] &= ~bitMask; });
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); btn.classList.add('active'); packet[byteIdx] |= bitMask; }, {passive:false});
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); btn.classList.remove('active'); packet[byteIdx] &= ~bitMask; }, {passive:false});
         }
         bindBtn('btnStart', 3, 0x01);
         bindBtn('btnMotion', 2, 0x80);
