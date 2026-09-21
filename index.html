@@ -73,7 +73,7 @@
         }
         .side-btn.yellow { background-color: #ffcc00; }
         
-        /* MOTION 활성화 시 녹색 유지 및 조명 효과 */
+        /* MOTION 눌렀을 때(active) 녹색 변경 및 조명 효과 */
         .side-btn.yellow.active { 
             background-color: #30d158 !important; 
             box-shadow: 0 0 12px rgba(48, 209, 88, 0.8);
@@ -436,60 +436,25 @@
             const btn = $(id);
             if (!btn) return;
 
-            btn.addEventListener("touchstart", (e) => {
-                e.preventDefault();
+            function press(e) {
+                if (e) e.preventDefault();
                 btn.classList.add("active");
                 packet[byteIdx] |= bitMask;
-            }, { passive: false });
+            }
 
-            btn.addEventListener("touchend", (e) => {
-                e.preventDefault();
-                btn.classList.remove("active");
-                packet[byteIdx] &= (~bitMask & 0xFF);
-            }, { passive: false });
-
-            btn.addEventListener("touchcancel", (e) => {
-                e.preventDefault();
-                btn.classList.remove("active");
-                packet[byteIdx] &= (~bitMask & 0xFF);
-            }, { passive: false });
-        }
-
-        // ---------- MOTION BUTTON (원샷 출력 + 토글 색상 유지) ----------
-        let isMotionActive = false;
-        function setupMotionOneShotToggle(id, byteIdx, bitMask) {
-            const btn = $(id);
-            if (!btn) return;
-
-            let lastPressTime = 0;
-
-            async function handlePress(e) {
+            function release(e) {
                 if (e) e.preventDefault();
-
-                // 200ms 터치/마우스 이중 실행 방지
-                const now = Date.now();
-                if (now - lastPressTime < 200) return;
-                lastPressTime = now;
-
-                // 1. UI 색상 상태 전환 (손을 떼어도 변경된 상태가 계속 유지됨)
-                isMotionActive = !isMotionActive;
-                if (isMotionActive) {
-                    btn.classList.add("active");    // 초록색 변경 및 유지
-                } else {
-                    btn.classList.remove("active"); // 노란색 복귀 및 유지
-                }
-
-                // 2. 단 '한 번만' 출력을 보내기 위해 비트를 1로 설정 후 즉시 BLE 전송
-                packet[byteIdx] |= bitMask;
-                await sendBLEData();
-
-                // 3. 전송 직후 바로 비트를 0으로 해제하여 반복 출력을 차단
+                btn.classList.remove("active");
                 packet[byteIdx] &= (~bitMask & 0xFF);
             }
 
-            // 누르는 순간(Press Down)에만 동작하며, 손을 뗄 때(touchend)는 아무 동작도 하지 않아 색상이 유지됩니다.
-            btn.addEventListener("touchstart", handlePress, { passive: false });
-            btn.addEventListener("mousedown", handlePress);
+            btn.addEventListener("touchstart", press, { passive: false });
+            btn.addEventListener("touchend", release, { passive: false });
+            btn.addEventListener("touchcancel", release, { passive: false });
+
+            btn.addEventListener("mousedown", press);
+            btn.addEventListener("mouseup", release);
+            btn.addEventListener("mouseleave", release);
         }
 
         // ---------- TOGGLE PAIRS (상호 배타적 토글) ----------
@@ -535,10 +500,8 @@
         // 정전 / 역전 토글 (재터치 시 OFF)
         setupToggleExclusivePair("btnPumpFwd", "btnPumpRev", 2, 0x08, 0x10);
 
-        // MOTION 스위치 설정 (누를 때마다 단 1회 펄스 출력 + 초록/노랑 토글 유지)
-        setupMotionOneShotToggle("btnMotion", 2, 0x80);
-
-        // Momentary switches
+        // Momentary switches (누르고 있는 동안만 동작, MOTION 포함)
+        addMomentaryButton("btnMotion",    2, 0x80); // 누르면 녹색 + ON, 떼면 노란색 + OFF
         addMomentaryButton("btnStart",     3, 0x01);
         addMomentaryButton("btnRpmUp",     2, 0x02);
         addMomentaryButton("btnRpmDn",     2, 0x04);
