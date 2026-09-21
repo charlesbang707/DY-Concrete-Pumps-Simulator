@@ -69,22 +69,23 @@
             writing-mode: vertical-rl; text-orientation: upright; font-weight: bold; font-size: 14px; letter-spacing: 2px;
             background-color: #34c759; color: #000; border: none; border-radius: 5px; height: 90%; width: 45px; 
             touch-action: none; transition: background-color 0.15s ease, box-shadow 0.15s ease;
+            cursor: pointer;
         }
         .side-btn.yellow { background-color: #ffcc00; }
         
-        /* MOTION 토글 활성화 시 녹색 및 조명 효과 적용 */
-        .side-btn.active, .side-btn.yellow.active { 
+        /* MOTION 활성화 시 녹색 유지 및 조명 효과 */
+        .side-btn.yellow.active { 
             background-color: #30d158 !important; 
             box-shadow: 0 0 12px rgba(48, 209, 88, 0.8);
         }
         
         .btn-group { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
-        .btn { background-color: #333; color: white; border: 1px solid #555; padding: 8px 5px; border-radius: 5px; font-size: 11px; font-weight: bold; min-width: 50px; touch-action: none; }
+        .btn { background-color: #333; color: white; border: 1px solid #555; padding: 8px 5px; border-radius: 5px; font-size: 11px; font-weight: bold; min-width: 50px; touch-action: none; cursor: pointer; }
         .btn.active { background-color: #0a84ff; border-color: #64d2ff; }
         
         .btn-gss {
             background-color: #ff453a; border-radius: 50%; width: 70px; height: 70px; 
-            font-size: 18px; font-weight: 900; color: white; border: 4px solid white; box-shadow: 0 0 15px rgba(255,69,58,0.6); touch-action: none;
+            font-size: 18px; font-weight: 900; color: white; border: 4px solid white; box-shadow: 0 0 15px rgba(255,69,58,0.6); touch-action: none; cursor: pointer;
         }
         .btn-gss.active { background-color: #d70015; border-color: #ff9f0a; }
 
@@ -382,7 +383,7 @@
         initJoystick("areaLeft",   "knobLeft",   "valLeft",   "X",       "Y",       5, 4, false, true);
         // 중앙 (정상)
         initJoystick("areaCenter", "knobCenter", "valCenter", "2붐(A6)", "3붐(A5)", 9, 8, false, false);
-        // 우측 (스윙 X축 정상 원복, 1붐 Y축 상하 반전 유지)
+        // 우측 (스윙 X축 정상, 1붐 Y축 상하 반전)
         initJoystick("areaRight",  "knobRight",  "valRight",  "X",       "Y",       7, 6, false, true);
 
         // ---------- DIALS ----------
@@ -461,23 +462,36 @@
             }, { passive: false });
         }
 
-        // ---------- SINGLE TOGGLE BUTTON (MOTION 전용) ----------
-        function setupSingleToggleButton(id, byteIdx, bitMask) {
+        // ---------- MOTION TOGGLE SWITCH ----------
+        let isMotionOn = false;
+        function setupMotionToggle(id, byteIdx, bitMask) {
             const btn = $(id);
             if (!btn) return;
 
-            btn.addEventListener("touchstart", (e) => {
-                e.preventDefault();
-                const isOn = (packet[byteIdx] & bitMask) !== 0;
+            let lastPressTime = 0;
 
-                if (isOn) {
-                    packet[byteIdx] &= (~bitMask & 0xFF);
-                    btn.classList.remove("active"); // 노란색으로 원복
+            function handlePress(e) {
+                if (e) e.preventDefault();
+
+                // 터치와 마우스 중복 이벤트 방지 (200ms)
+                const now = Date.now();
+                if (now - lastPressTime < 200) return;
+                lastPressTime = now;
+
+                isMotionOn = !isMotionOn;
+
+                if (isMotionOn) {
+                    packet[byteIdx] |= bitMask;      // MOTION 출력 ON (0x80)
+                    btn.classList.add("active");      // 녹색으로 전환 및 계속 유지
                 } else {
-                    packet[byteIdx] |= bitMask;
-                    btn.classList.add("active");    // 녹색으로 변경 및 유지
+                    packet[byteIdx] &= (~bitMask & 0xFF); // MOTION 출력 OFF
+                    btn.classList.remove("active");   // 노란색으로 원복
                 }
-            }, { passive: false });
+            }
+
+            // 누르는 순간(Press Down)에만 토글 동작 실행 (뗐을 때 이벤트는 등록하지 않음)
+            btn.addEventListener("touchstart", handlePress, { passive: false });
+            btn.addEventListener("mousedown", handlePress);
         }
 
         // ---------- TOGGLE PAIRS (상호 배타적 토글) ----------
@@ -523,8 +537,8 @@
         // 정전 / 역전 토글 (재터치 시 OFF)
         setupToggleExclusivePair("btnPumpFwd", "btnPumpRev", 2, 0x08, 0x10);
 
-        // MOTION 단독 토글 스위치 (ON: 녹색, OFF: 노란색)
-        setupSingleToggleButton("btnMotion", 2, 0x80);
+        // MOTION 스위치 설정 (ON: 녹색, OFF: 노란색)
+        setupMotionToggle("btnMotion", 2, 0x80);
 
         // Momentary switches
         addMomentaryButton("btnStart",     3, 0x01);
